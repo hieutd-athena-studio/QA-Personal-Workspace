@@ -9,13 +9,7 @@ import { join } from 'path'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 
-// TODO(e2e): unblock — first launch via playwright + Electron 39 currently
-// fails before firstWindow resolves; main process closes early. Suspect a
-// native-module ABI quirk after electron-builder install-app-deps under
-// Playwright's launcher, OR an unhandled error in migrations under the env
-// override. Skip until investigated. Build + unit tests prove the wiring;
-// this only covers the visual happy path.
-test.describe.skip('projects smoke (skipped — see TODO above)', () => {
+test.describe('projects smoke', () => {
   let app: ElectronApplication
   let window: Page
   let userDataDir: string
@@ -30,6 +24,10 @@ test.describe.skip('projects smoke (skipped — see TODO above)', () => {
         QA_WORKSPACE_DB_PATH: join(userDataDir, 'qa-workspace.db'),
         NODE_ENV: 'test'
       }
+    })
+    // Surface main-process stderr so CI logs capture crashes / ABI errors
+    app.process().stderr?.on('data', (chunk: Buffer) => {
+      process.stderr.write('[electron-main] ' + chunk.toString())
     })
     window = await app.firstWindow()
     await window.waitForLoadState('domcontentloaded')
@@ -58,8 +56,13 @@ test.describe.skip('projects smoke (skipped — see TODO above)', () => {
     await window.getByLabel('Description (optional)').fill('First project')
     await window.getByRole('button', { name: /create project/i }).click()
 
-    await expect(window.getByText('Arrival')).toBeVisible()
-    await expect(window.getByText('ARR')).toBeVisible()
+    // Wait for the dialog to close (signals the create mutation succeeded)
+    await expect(window.getByRole('dialog')).toBeHidden()
+
+    // The project list should update and show the new project.
+    // Use the link role (each project card is a <Link>) to avoid matching the
+    // "Created Arrival" success toast which also contains the text "Arrival".
+    await expect(window.getByRole('link', { name: /ARR.*Arrival/i })).toBeVisible()
     await expect(window.getByText('No projects yet')).toBeHidden()
   })
 
@@ -68,11 +71,18 @@ test.describe.skip('projects smoke (skipped — see TODO above)', () => {
       .getByRole('button', { name: /new project/i })
       .first()
       .click()
+
+    await expect(window.getByRole('dialog')).toBeVisible()
     await window.getByLabel('Display prefix').fill('ARR')
     await window.getByLabel('Name').fill('Duplicate')
     await window.getByRole('button', { name: /create project/i }).click()
 
-    await expect(window.getByText(/already exists/i)).toBeVisible({ timeout: 3000 })
+    // The Electron IPC propagates the UniqueConstraintError message.
+    // The renderer shows it via toast.error("Create failed: ...already exists...").
+    await expect(window.getByText(/already exists/i)).toBeVisible({ timeout: 5000 })
+
+    // Dismiss dialog — Cancel button closes it without saving
     await window.getByRole('button', { name: /cancel/i }).click()
+    await expect(window.getByRole('dialog')).toBeHidden()
   })
-}) // end describe.skip
+})

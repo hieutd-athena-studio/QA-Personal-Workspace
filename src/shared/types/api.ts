@@ -5,6 +5,7 @@ import type { NewTestPlanInput, TestPlan, TestPlanPatch, TestPlanWithTasks } fro
 import type { NewTestCycleInput, TestCycle, TestCyclePatch } from './test_cycles'
 import type { Assignment, AssignmentStatus, AssignmentUpdate } from './assignments'
 import type { NewTestTypeInput, TestType, TestTypePatch } from './test_types'
+import type { UpdaterEvent, UpdaterInvokeResult } from './updater'
 
 export interface ProjectsAPI {
   list: () => Promise<Project[]>
@@ -91,6 +92,13 @@ export interface BackupAPI {
   import: () => Promise<{ canceled: boolean }>
 }
 
+export interface UpdaterAPI {
+  check: () => Promise<UpdaterInvokeResult>
+  download: () => Promise<UpdaterInvokeResult>
+  install: () => Promise<void>
+  onEvent: (cb: (event: UpdaterEvent) => void) => () => void
+}
+
 export interface AppAPI {
   projects: ProjectsAPI
   categories: CategoriesAPI
@@ -100,4 +108,5 @@ export interface AppAPI {
   assignments: AssignmentsAPI
   types: TestTypesAPI
   backup: BackupAPI
+  updater: UpdaterAPI
 }

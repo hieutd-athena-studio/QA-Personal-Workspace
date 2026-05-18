@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { test_cases } from '../schema/test_cases'
 import { test_case_steps } from '../schema/test_case_steps'
 import { projects } from '../schema/projects'
+import { incrementCaseCounter } from './projects'
 import type * as schema from '../schema'
 import {
   NewTestCaseSchema,
@@ -21,11 +22,7 @@ type Db = BetterSQLite3Database<typeof schema>
 function nextDisplayId(db: Db, projectId: string): string {
   const proj = db.select().from(projects).where(eq(projects.id, projectId)).get()
   if (!proj) throw new NotFoundError('project', projectId)
-  const next = (proj.case_counter as number) + 1
-  db.update(projects)
-    .set({ case_counter: next, updated_at: new Date().toISOString() })
-    .where(eq(projects.id, projectId))
-    .run()
+  const next = incrementCaseCounter(db, projectId)
   return `${proj.display_prefix}-TC${String(next).padStart(3, '0')}`
 }
 
@@ -156,17 +153,29 @@ export function deleteTestCase(db: Db, id: string): void {
   db.delete(test_cases).where(eq(test_cases.id, id)).run()
 }
 
+const MAX_IMPORT_CASES = 5000
+
 export function importTestCasesJson(
   db: Db,
   projectId: string,
   payload: NewTestCaseInput[]
 ): number {
-  let count = 0
-  for (const tc of payload) {
-    createTestCase(db, { ...tc, project_id: projectId })
-    count++
+  if (!Array.isArray(payload)) {
+    throw new Error('importTestCasesJson: payload must be an array')
   }
-  return count
+  if (payload.length > MAX_IMPORT_CASES) {
+    throw new Error(
+      `importTestCasesJson: payload too large (${payload.length} > ${MAX_IMPORT_CASES})`
+    )
+  }
+  return db.transaction((tx) => {
+    let count = 0
+    for (const tc of payload) {
+      createTestCase(tx as unknown as Db, { ...tc, project_id: projectId })
+      count++
+    }
+    return count
+  })
 }
 
 export function exportTestCasesJson(db: Db, projectId: string): TestCaseWithSteps[] {

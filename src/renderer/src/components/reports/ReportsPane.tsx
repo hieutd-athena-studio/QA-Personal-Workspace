@@ -10,16 +10,35 @@ import {
   SelectTrigger,
   SelectValue
 } from '@renderer/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { useTestCyclesForProject } from '@renderer/hooks/useTestCycles'
 import { useTestPlans } from '@renderer/hooks/useTestPlans'
 import { useCycleProgress } from '@renderer/hooks/useAssignments'
 import { exportCycleCsv } from './export-csv'
+import { MultiCycleReport } from './MultiCycleReport'
 
 interface Props {
   projectId: string
 }
 
 export function ReportsPane({ projectId }: Props): React.JSX.Element {
+  return (
+    <Tabs defaultValue="single">
+      <TabsList>
+        <TabsTrigger value="single">Single cycle</TabsTrigger>
+        <TabsTrigger value="compare">Compare cycles</TabsTrigger>
+      </TabsList>
+      <TabsContent value="single" className="mt-4">
+        <SingleCycleReport projectId={projectId} />
+      </TabsContent>
+      <TabsContent value="compare" className="mt-4">
+        <MultiCycleReport projectId={projectId} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   const { data: cycles } = useTestCyclesForProject(projectId)
   const { data: plans } = useTestPlans(projectId)
   const [cycleId, setCycleId] = useState<string>('')

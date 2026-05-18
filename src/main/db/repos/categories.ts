@@ -10,7 +10,7 @@ import {
   type CategoryPatch,
   type NewCategoryInput
 } from '../../../shared/types/categories'
-import { NotFoundError } from './errors'
+import { NotFoundError, ValidationError } from './errors'
 
 type Db = BetterSQLite3Database<typeof schema>
 
@@ -52,7 +52,7 @@ export function createCategory(db: Db, input: NewCategoryInput): Category {
     const parent = getCategory(db, parsed.parent_category_id)
     if (!parent) throw new NotFoundError('category', parsed.parent_category_id)
     if (parent.parent_category_id) {
-      throw new Error('cannot nest categories more than 2 levels')
+      throw new ValidationError('cannot nest categories more than 2 levels')
     }
   }
   const now = new Date().toISOString()

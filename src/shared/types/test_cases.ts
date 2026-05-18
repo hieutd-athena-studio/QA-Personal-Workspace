@@ -37,7 +37,7 @@ export const NewTestCaseSchema = z.object({
   description: z.string().nullable().optional(),
   expected_result: z.string().nullable().optional(),
   version: z.string().min(1).default('1.0'),
-  steps: z.array(NewTestCaseStepSchema).default([])
+  steps: z.array(NewTestCaseStepSchema).max(500).default([])
 })
 
 export const TestCasePatchSchema = z

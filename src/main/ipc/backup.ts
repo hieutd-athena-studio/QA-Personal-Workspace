@@ -1,6 +1,6 @@
 import { dialog, ipcMain } from 'electron'
 import { closeDb, getDb, getDbPath, getUserDataPath } from '../db/client'
-import { exportDatabase, importDatabase } from '../db/backup'
+import { exportDatabase, importDatabase, snapshotDatabase } from '../db/backup'
 import { runMigrations } from '../db/migrations/runner'
 
 export function registerBackupIpc(): void {
@@ -30,12 +30,19 @@ export function registerBackupIpc(): void {
       cancelId: 0,
       message: 'Replace current workspace with imported backup?',
       detail:
-        'This action overwrites your current database. A snapshot of the current state will be saved first.'
+        'A snapshot of the current workspace will be saved first; you can restore it later from userData/snapshots if anything goes wrong.'
     })
     if (confirm.response !== 1) return { canceled: true }
 
+    snapshotDatabase(getDb().raw, getUserDataPath())
     closeDb()
-    importDatabase(filePaths[0]!, getDbPath())
+    try {
+      importDatabase(filePaths[0]!, getDbPath())
+    } catch (err) {
+      // Re-open existing DB so the app stays functional after a failed import.
+      getDb()
+      throw err
+    }
     const { raw } = getDb()
     runMigrations(raw, getUserDataPath())
     return { canceled: false }

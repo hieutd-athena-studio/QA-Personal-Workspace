@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { test_plans } from '../schema/test_plans'
 import { test_plan_tasks } from '../schema/test_plan_tasks'
 import { projects } from '../schema/projects'
+import { incrementPlanCounter } from './projects'
 import type * as schema from '../schema'
 import {
   NewTestPlanSchema,
@@ -21,11 +22,7 @@ type Db = BetterSQLite3Database<typeof schema>
 function nextDisplayId(db: Db, projectId: string): string {
   const proj = db.select().from(projects).where(eq(projects.id, projectId)).get()
   if (!proj) throw new NotFoundError('project', projectId)
-  const next = (proj.plan_counter as number) + 1
-  db.update(projects)
-    .set({ plan_counter: next, updated_at: new Date().toISOString() })
-    .where(eq(projects.id, projectId))
-    .run()
+  const next = incrementPlanCounter(db, projectId)
   return `${proj.display_prefix}-PL${String(next).padStart(3, '0')}`
 }
 

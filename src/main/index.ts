@@ -12,6 +12,7 @@ import { registerTestCyclesIpc } from './ipc/test_cycles'
 import { registerAssignmentsIpc } from './ipc/assignments'
 import { registerTestTypesIpc } from './ipc/test_types'
 import { registerBackupIpc } from './ipc/backup'
+import { initAutoUpdater } from './updater'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -28,11 +29,35 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow.show())
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show()
+    if (!is.dev) {
+      initAutoUpdater(mainWindow)
+    }
+  })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const url = new URL(details.url)
+      if (url.protocol === 'https:' || url.protocol === 'http:') {
+        shell.openExternal(details.url)
+      }
+    } catch {
+      // ignore invalid URLs
+    }
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    let allowed = false
+    try {
+      const parsed = new URL(url)
+      allowed = parsed.protocol === 'file:' || Boolean(devUrl && url.startsWith(devUrl))
+    } catch {
+      allowed = false
+    }
+    if (!allowed) event.preventDefault()
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

@@ -1,6 +1,7 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AppAPI } from '../shared/types/api'
+import type { UpdaterEvent } from '../shared/types/updater'
 
 const api: AppAPI = {
   projects: {
@@ -70,6 +71,18 @@ const api: AppAPI = {
   backup: {
     export: () => ipcRenderer.invoke('backup:export'),
     import: () => ipcRenderer.invoke('backup:import')
+  },
+  updater: {
+    check: () => ipcRenderer.invoke('updater:check'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    onEvent: (cb) => {
+      const listener = (_event: IpcRendererEvent, payload: UpdaterEvent): void => cb(payload)
+      ipcRenderer.on('updater:event', listener)
+      return () => {
+        ipcRenderer.off('updater:event', listener)
+      }
+    }
   }
 }
 
