@@ -1,6 +1,10 @@
+---
+tags: [qa-workspace-v2, decisions, adr]
+---
+
 # Decisions — QA Workspace v2
 
-Flat bulleted ADR log. One bullet per decision. If > 200 words, promote to its own file under this directory.
+Flat bulleted ADR log. One bullet per decision. If > 200 words, promote to its own file under this directory. See [[CONTEXT]] for current constraints derived from these decisions.
 
 Format: `YYYY-MM-DD — decision — reason — alternatives rejected`
 

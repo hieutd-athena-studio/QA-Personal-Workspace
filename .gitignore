@@ -55,3 +55,10 @@ playwright/.cache/
 
 # Husky internals
 .husky/_/
+
+# Obsidian — keep config + plugins, drop per-user workspace state + cache
+Brain/.obsidian/workspace.json
+Brain/.obsidian/workspace-mobile.json
+Brain/.obsidian/workspaces.json
+Brain/.obsidian/cache
+Brain/.trash/

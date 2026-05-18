@@ -21,19 +21,19 @@ QA Workspace v2 — a fully local, offline-first, single-user desktop tool for Q
 
 Spawn via the `Agent` tool. Each agent gets a fresh context window and returns only a summary.
 
-| When you need... | Spawn | Source |
-|---|---|---|
-| Plan a feature before coding (multi-file, cross-cutting) | `everything-claude-code:planner` | Harness plugin |
-| Implement TS/React/Electron/IPC/forms | `main-coder` | `.claude/agents/main-coder.md` |
-| Design or build UI screens / components / theming | `ui-designer` | `.claude/agents/ui-designer.md` |
-| Touch DB schema, migrations, backup/restore | `db-migration` | `.claude/agents/db-migration.md` |
-| Write tests first (TDD for repos and components) | `everything-claude-code:tdd-guide` | Harness skill |
-| Write or run Playwright E2E tests | `everything-claude-code:e2e-runner` | Harness plugin |
-| Review code for TS strict + idiomatic patterns | `everything-claude-code:typescript-reviewer` | Harness plugin |
-| Review code for security (IPC, file paths, user input) | `everything-claude-code:security-reviewer` | Harness plugin |
-| Locate files / find symbols / grep references | `caveman:cavecrew-investigator` | Harness plugin |
-| Small 1-2 file edit (typo, rename, mechanical) | `caveman:cavecrew-builder` | Harness plugin |
-| Review a diff or PR | `caveman:cavecrew-reviewer` | Harness plugin |
+| When you need...                                         | Spawn                                        | Source                           |
+| -------------------------------------------------------- | -------------------------------------------- | -------------------------------- |
+| Plan a feature before coding (multi-file, cross-cutting) | `everything-claude-code:planner`             | Harness plugin                   |
+| Implement TS/React/Electron/IPC/forms                    | `main-coder`                                 | `.claude/agents/main-coder.md`   |
+| Design or build UI screens / components / theming        | `ui-designer`                                | `.claude/agents/ui-designer.md`  |
+| Touch DB schema, migrations, backup/restore              | `db-migration`                               | `.claude/agents/db-migration.md` |
+| Write tests first (TDD for repos and components)         | `everything-claude-code:tdd-guide`           | Harness skill                    |
+| Write or run Playwright E2E tests                        | `everything-claude-code:e2e-runner`          | Harness plugin                   |
+| Review code for TS strict + idiomatic patterns           | `everything-claude-code:typescript-reviewer` | Harness plugin                   |
+| Review code for security (IPC, file paths, user input)   | `everything-claude-code:security-reviewer`   | Harness plugin                   |
+| Locate files / find symbols / grep references            | `caveman:cavecrew-investigator`              | Harness plugin                   |
+| Small 1-2 file edit (typo, rename, mechanical)           | `caveman:cavecrew-builder`                   | Harness plugin                   |
+| Review a diff or PR                                      | `caveman:cavecrew-reviewer`                  | Harness plugin                   |
 
 ## Standard workflow for a new feature
 
@@ -70,9 +70,9 @@ pnpm test:e2e         playwright test
 pnpm build            electron-builder (use CI, not locally, for releases)
 ```
 
-## Brain vault
+## Brain vault (Obsidian)
 
-Project memory lives in `Brain/`. Layered, lean.
+Project memory lives in `Brain/` — an Obsidian vault. Open the folder in Obsidian for graph view, backlinks, daily notes, fuzzy search. Claude reads the same files as plain markdown.
 
 - `Brain/README.md` — entry point
 - `Brain/Architecture.md` — where info lives
@@ -81,6 +81,8 @@ Project memory lives in `Brain/`. Layered, lean.
 - `Brain/qa-workspace-v2/journals/<YYYY-MM-DD>.md` — per-session log
 - `Brain/qa-workspace-v2/lessons/<slug>.md` — bugs > 30 min, grep-friendly error string at top
 - `Brain/prompts/` — reusable prompt templates
+
+Cross-references use Obsidian wikilink syntax: `[[CONTEXT]]`, `[[decisions]]`, `[[2026-05-18]]`. Claude resolves these via Glob on the filename. `.obsidian/workspace.json` and `.obsidian/cache` are gitignored (per-user noise) — `app.json`, `appearance.json`, `core-plugins.json`, `graph.json` are tracked so plugin/theme config syncs between machines.
 
 ## Git workflow scaffolding
 

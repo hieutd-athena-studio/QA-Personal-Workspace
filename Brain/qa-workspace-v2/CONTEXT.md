@@ -1,6 +1,10 @@
+---
+tags: [qa-workspace-v2, context, home-base]
+---
+
 # QA Workspace v2 — Context
 
-Home Base. Claude reads this every session after `CLAUDE.md`.
+Home Base. Claude reads this every session after `../../CLAUDE.md`. See [[decisions]] for ADR log and `../../NEW-PROJECT-HANDOFF.md` (outside vault) for full greenfield plan.
 
 ## Purpose
 
@@ -31,12 +35,14 @@ Project (e.g. ARR)
 ## Hard constraints
 
 ### Electron boundary
+
 - Renderer never imports `node:fs`, `better-sqlite3`, `node:path`. Browser context only.
 - Main process owns all DB + file I/O.
 - IPC via typed `contextBridge` exposed as `window.api.<entity>.<method>`.
 - `nodeIntegration: false`, `contextIsolation: true`. Always.
 
 ### Database
+
 - SQLite file at `app.getPath('userData') + '/qa-workspace.db'`. Never hardcoded.
 - All migrations: forward-only, idempotent, atomic (`BEGIN TRANSACTION` / `COMMIT`).
 - Auto-snapshot DB to `userData/snapshots/qa-workspace.db.backup-<ISO8601>` before every migration. Keep last 3.
@@ -45,6 +51,7 @@ Project (e.g. ARR)
 - Per-project JSON bundle export/import = the "sync" replacement.
 
 ### Code style
+
 - No `any`. No `// @ts-ignore`.
 - No per-component `.css` files. Tailwind utilities + `globals.css` `@theme` tokens only.
 - Components ≤ 150 lines. Split when bigger.
@@ -53,6 +60,7 @@ Project (e.g. ARR)
 - No raw SQL strings in repos. Drizzle query builder. Raw SQL only inside migration files.
 
 ### Git
+
 - Conventional Commits required.
 - Trunk-based: `main` + short-lived `feat/*` or `fix/*` branches.
 - Never build release binaries locally. GitHub Actions only.
@@ -100,6 +108,6 @@ pnpm build            electron-builder (DO NOT use locally for releases — CI o
 
 ## Open questions / decisions pending
 
-- See `decisions.md` for what's been chosen.
+- See [[decisions]] for what's been chosen.
 - Apple Developer ID purchase: deferred until alpha-ready.
 - Windows code-signing cert: deferred. Ship unsigned + document SmartScreen click-through.
