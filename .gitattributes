@@ -1,0 +1,29 @@
+# Default: text auto-detection, normalize to LF in repo
+* text=auto eol=lf
+
+# Windows-specific scripts: keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.dmg binary
+*.exe binary
+*.zip binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Lockfiles: text but treat as generated (no merge conflicts to babysit)
+pnpm-lock.yaml -diff
+package-lock.json -diff
+yarn.lock -diff

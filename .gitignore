@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+.vite/
+# NOTE: build/ directory is NOT ignored — used by electron-builder for icons + entitlements
+
+# Local SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# DB snapshots (created at runtime in userData, but ignore if any leak into repo)
+snapshots/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors — keep shared VSCode dotfiles, drop personal noise
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Electron-builder output
+release/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Husky internals
+.husky/_/
