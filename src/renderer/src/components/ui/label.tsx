@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type, react-refresh/only-export-components */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import * as React from "react"
 import { Label as LabelPrimitive } from "radix-ui"
 

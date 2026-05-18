@@ -10,9 +10,7 @@ export function useProjects(): ReturnType<typeof useQuery<Project[]>> {
   })
 }
 
-export function useProject(
-  id: string | undefined
-): ReturnType<typeof useQuery<Project | null>> {
+export function useProject(id: string | undefined): ReturnType<typeof useQuery<Project | null>> {
   return useQuery({
     queryKey: ['projects', id],
     queryFn: () => window.api.projects.get(id!),

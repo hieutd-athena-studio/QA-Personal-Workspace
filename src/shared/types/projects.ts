@@ -2,9 +2,7 @@ import { z } from 'zod'
 
 export const ProjectSchema = z.object({
   id: z.string().uuid(),
-  display_prefix: z
-    .string()
-    .regex(/^[A-Z]{2,5}$/, 'display_prefix must be 2-5 uppercase letters'),
+  display_prefix: z.string().regex(/^[A-Z]{2,5}$/, 'display_prefix must be 2-5 uppercase letters'),
   name: z.string().min(1).max(100),
   description: z.string().nullable(),
   color: z.string().regex(/^#[0-9a-f]{6}$/i, 'color must be 6-digit hex'),

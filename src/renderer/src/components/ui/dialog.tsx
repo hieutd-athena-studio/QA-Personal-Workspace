@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type, react-refresh/only-export-components */
-"use client"
-
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import * as React from "react"
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"

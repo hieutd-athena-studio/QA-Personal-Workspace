@@ -17,10 +17,7 @@ export interface MigrationResult {
   snapshotPath?: string
 }
 
-export function runMigrations(
-  db: Database.Database,
-  userDataPath: string | null
-): MigrationResult {
+export function runMigrations(db: Database.Database, userDataPath: string | null): MigrationResult {
   ensureMetaTable(db)
   const current = readSchemaVersion(db)
   const pending = ALL_MIGRATIONS.filter((m) => m.version > current).sort(
@@ -40,8 +37,9 @@ export function runMigrations(
     db.exec('BEGIN TRANSACTION')
     try {
       migration.up(db)
-      db.prepare('UPDATE meta SET schema_version = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
-        .run(migration.version)
+      db.prepare(
+        'UPDATE meta SET schema_version = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1'
+      ).run(migration.version)
       db.exec('COMMIT')
     } catch (err) {
       db.exec('ROLLBACK')

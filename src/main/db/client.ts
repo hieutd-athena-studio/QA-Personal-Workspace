@@ -8,7 +8,15 @@ let dbInstance: Database.Database | null = null
 let drizzleInstance: BetterSQLite3Database<typeof schema> | null = null
 
 export function getDbPath(): string {
+  const override = process.env['QA_WORKSPACE_DB_PATH']
+  if (override) return override
   return join(app.getPath('userData'), 'qa-workspace.db')
+}
+
+export function getUserDataPath(): string {
+  const override = process.env['QA_WORKSPACE_USER_DATA']
+  if (override) return override
+  return app.getPath('userData')
 }
 
 export function getDb(): {

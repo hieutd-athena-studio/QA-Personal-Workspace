@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { closeDb, getDb } from './db/client'
+import { closeDb, getDb, getUserDataPath } from './db/client'
 import { runMigrations } from './db/migrations/runner'
 import { registerProjectsIpc } from './ipc/projects'
 
@@ -42,9 +42,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  const userDataPath = app.getPath('userData')
   const { raw } = getDb()
-  runMigrations(raw, userDataPath)
+  runMigrations(raw, getUserDataPath())
 
   registerProjectsIpc()
 

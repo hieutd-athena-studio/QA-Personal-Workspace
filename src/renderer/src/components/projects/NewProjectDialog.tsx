@@ -99,11 +99,7 @@ export function NewProjectDialog({ open, onOpenChange }: Props): React.JSX.Eleme
                 <FormItem>
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Short description"
-                      {...field}
-                      value={field.value ?? ''}
-                    />
+                    <Input placeholder="Short description" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1,12 +1,14 @@
-import { useState } from 'react'
-import { Plus, FolderOpen } from 'lucide-react'
+import { FolderOpen, Plus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { useProjects } from '@renderer/hooks/useProjects'
+import { useUIStore } from '@renderer/stores/ui'
 import { NewProjectDialog } from './NewProjectDialog'
 import { ProjectsList } from './ProjectsList'
 
 export function ProjectsPage(): React.JSX.Element {
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const dialogOpen = useUIStore((s) => s.newProjectOpen)
+  const setDialogOpen = useUIStore((s) => s.setNewProjectOpen)
+  const openNewProject = useUIStore((s) => s.openNewProject)
   const { data: projects, isLoading, error } = useProjects()
 
   return (
@@ -15,10 +17,14 @@ export function ProjectsPage(): React.JSX.Element {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-sm text-muted-foreground">
-            Test case management projects on this machine.
+            Test case management projects on this machine.{' '}
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs font-mono">
+              {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K
+            </kbd>{' '}
+            for command palette.
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={openNewProject}>
           <Plus className="mr-2 size-4" /> New project
         </Button>
       </header>
@@ -44,7 +50,7 @@ export function ProjectsPage(): React.JSX.Element {
           <p className="text-sm text-muted-foreground">
             Create your first project to start managing test cases.
           </p>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={openNewProject}>
             <Plus className="mr-2 size-4" /> New project
           </Button>
         </div>
