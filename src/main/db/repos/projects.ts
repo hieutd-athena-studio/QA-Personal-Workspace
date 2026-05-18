@@ -10,20 +10,9 @@ import {
   type Project,
   type ProjectPatch
 } from '../../../shared/types/projects'
+import { NotFoundError, UniqueConstraintError } from './errors'
 
-export class NotFoundError extends Error {
-  constructor(entity: string, id: string) {
-    super(`${entity} not found: ${id}`)
-    this.name = 'NotFoundError'
-  }
-}
-
-export class UniqueConstraintError extends Error {
-  constructor(field: string, value: string) {
-    super(`${field} already exists: ${value}`)
-    this.name = 'UniqueConstraintError'
-  }
-}
+export { NotFoundError, UniqueConstraintError }
 
 type Db = BetterSQLite3Database<typeof schema>
 

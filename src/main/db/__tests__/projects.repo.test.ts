@@ -121,7 +121,8 @@ describe('projects repo', () => {
 
   it('migration runner is idempotent on second call', () => {
     const raw = new Database(':memory:')
-    expect(runMigrations(raw, null).applied).toBe(1)
+    const first = runMigrations(raw, null).applied
+    expect(first).toBeGreaterThan(0)
     expect(runMigrations(raw, null).applied).toBe(0)
   })
 })

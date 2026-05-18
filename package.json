@@ -47,6 +47,7 @@
     "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.2",
     "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.16.0",
     "radix-ui": "^1.4.3",
     "react-hook-form": "^7.76.0",

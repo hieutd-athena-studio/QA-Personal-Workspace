@@ -1,8 +1,8 @@
-import { Check, Trash2 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ChevronRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@renderer/components/ui/button'
 import { Card, CardContent } from '@renderer/components/ui/card'
-import { cn } from '@renderer/lib/utils'
 import { useDeleteProject } from '@renderer/hooks/useProjects'
 import { useActiveProjectStore } from '@renderer/stores/active-project'
 import type { Project } from '@shared/types/projects'
@@ -17,6 +17,7 @@ export function ProjectsList({ projects }: Props): React.JSX.Element {
   const setActiveId = useActiveProjectStore((s) => s.setId)
 
   const handleDelete = (e: React.MouseEvent, id: string, name: string): void => {
+    e.preventDefault()
     e.stopPropagation()
     if (!confirm(`Delete project "${name}"? This cannot be undone.`)) return
     deleteProject.mutate(id, {
@@ -30,17 +31,10 @@ export function ProjectsList({ projects }: Props): React.JSX.Element {
 
   return (
     <ul className="space-y-3">
-      {projects.map((project) => {
-        const isActive = activeId === project.id
-        return (
-          <li key={project.id}>
-            <Card
-              className={cn(
-                'cursor-pointer transition-colors hover:bg-accent/40',
-                isActive && 'ring-2 ring-accent'
-              )}
-              onClick={() => setActiveId(isActive ? null : project.id)}
-            >
+      {projects.map((project) => (
+        <li key={project.id}>
+          <Link to="/projects/$projectId" params={{ projectId: project.id }} className="block">
+            <Card className="cursor-pointer transition-colors hover:bg-accent/40">
               <CardContent className="flex items-center gap-4 py-4">
                 <span
                   className="size-10 shrink-0 rounded-md"
@@ -53,7 +47,6 @@ export function ProjectsList({ projects }: Props): React.JSX.Element {
                       {project.display_prefix}
                     </span>
                     <span className="truncate font-medium">{project.name}</span>
-                    {isActive && <Check className="size-4 text-accent-foreground" />}
                   </div>
                   {project.description && (
                     <p className="truncate text-sm text-muted-foreground">{project.description}</p>
@@ -67,11 +60,12 @@ export function ProjectsList({ projects }: Props): React.JSX.Element {
                 >
                   <Trash2 className="size-4" />
                 </Button>
+                <ChevronRight className="size-4 text-muted-foreground" />
               </CardContent>
             </Card>
-          </li>
-        )
-      })}
+          </Link>
+        </li>
+      ))}
     </ul>
   )
 }

@@ -5,11 +5,18 @@ import icon from '../../resources/icon.png?asset'
 import { closeDb, getDb, getUserDataPath } from './db/client'
 import { runMigrations } from './db/migrations/runner'
 import { registerProjectsIpc } from './ipc/projects'
+import { registerCategoriesIpc } from './ipc/categories'
+import { registerTestCasesIpc } from './ipc/test_cases'
+import { registerTestPlansIpc } from './ipc/test_plans'
+import { registerTestCyclesIpc } from './ipc/test_cycles'
+import { registerAssignmentsIpc } from './ipc/assignments'
+import { registerTestTypesIpc } from './ipc/test_types'
+import { registerBackupIpc } from './ipc/backup'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1280,
+    height: 860,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -46,6 +53,13 @@ app.whenReady().then(() => {
   runMigrations(raw, getUserDataPath())
 
   registerProjectsIpc()
+  registerCategoriesIpc()
+  registerTestCasesIpc()
+  registerTestPlansIpc()
+  registerTestCyclesIpc()
+  registerAssignmentsIpc()
+  registerTestTypesIpc()
+  registerBackupIpc()
 
   createWindow()
 
