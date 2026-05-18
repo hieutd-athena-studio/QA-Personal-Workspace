@@ -1,12 +1,18 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { AppAPI } from '../shared/types/api'
+import type { NewProjectInput, ProjectPatch } from '../shared/types/projects'
 
-// Custom APIs for renderer
-const api = {}
+const api: AppAPI = {
+  projects: {
+    list: () => ipcRenderer.invoke('projects:list'),
+    get: (id: string) => ipcRenderer.invoke('projects:get', id),
+    create: (input: NewProjectInput) => ipcRenderer.invoke('projects:create', input),
+    update: (id: string, patch: ProjectPatch) => ipcRenderer.invoke('projects:update', id, patch),
+    delete: (id: string) => ipcRenderer.invoke('projects:delete', id)
+  }
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
@@ -15,8 +21,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (define in dts)
+  // @ts-expect-error contextIsolation disabled fallback
   window.electron = electronAPI
-  // @ts-ignore (define in dts)
+  // @ts-expect-error contextIsolation disabled fallback
   window.api = api
 }

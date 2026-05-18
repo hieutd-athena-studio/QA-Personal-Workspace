@@ -13,6 +13,13 @@ out/
 *.db-wal
 *.db-shm
 
+# Drizzle-kit local dev DB (used only for migration generation, not runtime)
+dev.db
+dev.db-*
+
+# TanStack Router auto-generated route tree
+src/renderer/src/routeTree.gen.ts
+
 # DB snapshots (created at runtime in userData, but ignore if any leak into repo)
 snapshots/
 
