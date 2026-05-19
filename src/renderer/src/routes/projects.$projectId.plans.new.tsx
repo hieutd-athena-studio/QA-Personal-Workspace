@@ -14,7 +14,9 @@ function NewPlanRoute(): React.JSX.Element {
       <TestPlanForm
         projectId={projectId}
         mode="create"
-        onDone={() => navigate({ to: '/projects/$projectId', params: { projectId } })}
+        onDone={() =>
+          navigate({ to: '/projects/$projectId', params: { projectId }, search: { tab: 'plans' } })
+        }
       />
     </div>
   )

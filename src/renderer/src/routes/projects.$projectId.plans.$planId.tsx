@@ -31,7 +31,13 @@ function EditPlanRoute(): React.JSX.Element {
           projectId={projectId}
           mode="edit"
           initial={plan}
-          onDone={() => navigate({ to: '/projects/$projectId', params: { projectId } })}
+          onDone={() =>
+            navigate({
+              to: '/projects/$projectId',
+              params: { projectId },
+              search: { tab: 'plans' }
+            })
+          }
         />
       </section>
       <section>

@@ -13,9 +13,10 @@ import type { Project } from '@shared/types/projects'
 
 interface Props {
   project: Project
+  defaultTab?: string
 }
 
-export function ProjectDetail({ project }: Props): React.JSX.Element {
+export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element {
   const exportBackup = useExportBackup()
   const importBackup = useImportBackup()
 
@@ -79,7 +80,7 @@ export function ProjectDetail({ project }: Props): React.JSX.Element {
         </div>
       </header>
 
-      <Tabs defaultValue="dashboard">
+      <Tabs defaultValue={defaultTab ?? 'dashboard'}>
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="cases">Test Cases</TabsTrigger>

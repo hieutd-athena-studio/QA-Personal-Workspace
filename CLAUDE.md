@@ -21,19 +21,19 @@ QA Workspace v2 — a fully local, offline-first, single-user desktop tool for Q
 
 Spawn via the `Agent` tool. Each agent gets a fresh context window and returns only a summary.
 
-| When you need...                                         | Spawn                                        | Source                           |
-| -------------------------------------------------------- | -------------------------------------------- | -------------------------------- |
-| Plan a feature before coding (multi-file, cross-cutting) | `everything-claude-code:planner`             | Harness plugin                   |
-| Implement TS/React/Electron/IPC/forms                    | `main-coder`                                 | `.claude/agents/main-coder.md`   |
-| Design or build UI screens / components / theming        | `ui-designer`                                | `.claude/agents/ui-designer.md`  |
-| Touch DB schema, migrations, backup/restore              | `db-migration`                               | `.claude/agents/db-migration.md` |
-| Write tests first (TDD for repos and components)         | `everything-claude-code:tdd-guide`           | Harness skill                    |
-| Write or run Playwright E2E tests                        | `everything-claude-code:e2e-runner`          | Harness plugin                   |
-| Review code for TS strict + idiomatic patterns           | `everything-claude-code:typescript-reviewer` | Harness plugin                   |
-| Review code for security (IPC, file paths, user input)   | `everything-claude-code:security-reviewer`   | Harness plugin                   |
-| Locate files / find symbols / grep references            | `caveman:cavecrew-investigator`              | Harness plugin                   |
-| Small 1-2 file edit (typo, rename, mechanical)           | `caveman:cavecrew-builder`                   | Harness plugin                   |
-| Review a diff or PR                                      | `caveman:cavecrew-reviewer`                  | Harness plugin                   |
+| When you need...                                         | Spawn                                     | Source                                  |
+| -------------------------------------------------------- | ----------------------------------------- | --------------------------------------- |
+| Plan a feature before coding (multi-file, cross-cutting) | `planner`                                 | `.claude/agents/planner.md`             |
+| Implement TS/React/Electron/IPC/forms                    | `main-coder`                              | `.claude/agents/main-coder.md`          |
+| Design or build UI screens / components / theming        | `ui-designer`                             | `.claude/agents/ui-designer.md`         |
+| Touch DB schema, migrations, backup/restore              | `db-migration`                            | `.claude/agents/db-migration.md`        |
+| Write tests first (TDD for repos and components)         | `tdd-guide`                               | `.claude/agents/tdd-guide.md`           |
+| Write or run Playwright E2E tests                        | `e2e-runner`                              | `.claude/agents/e2e-runner.md`          |
+| Review code for TS strict + idiomatic patterns           | `typescript-reviewer`                     | `.claude/agents/typescript-reviewer.md` |
+| Review code for security (IPC, file paths, user input)   | `security-reviewer`                       | `.claude/agents/security-reviewer.md`   |
+| Locate files / find symbols / grep references            | `Explore`                                 | Built-in harness agent                  |
+| Small 1-2 file edit (typo, rename, mechanical)           | inline edit or `caveman:cavecrew-builder` | Harness plugin                          |
+| Review a diff or PR                                      | `caveman:cavecrew-reviewer`               | Harness plugin                          |
 
 ## Standard workflow for a new feature
 
