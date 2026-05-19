@@ -1,0 +1,366 @@
+/* plan-detail.css — Plan detail page (form + cycles panel) */
+
+.plan-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.plan-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 36px 64px;
+}
+.plan-inner {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.plan-head {
+  margin-bottom: 24px;
+}
+.plan-head .pid-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+.plan-head h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--fg);
+}
+.plan-head .h1-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--fg);
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 6px;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+.plan-head .h1-input:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.plan-head .h1-input:focus {
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--accent-ring);
+}
+
+.plan-section {
+  margin-bottom: 30px;
+}
+.plan-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.plan-section-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--fg);
+}
+.plan-section-head .helper {
+  font-size: 12px;
+  color: var(--fg-subtle);
+}
+.plan-section-head .right {
+  margin-left: auto;
+}
+
+/* dates + budget row */
+.dates-grid {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 18px;
+  align-items: end;
+}
+@media (max-width: 760px) {
+  .dates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.budget-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+.budget-card .top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.budget-card .total {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.budget-card .of {
+  font-size: 12px;
+  color: var(--fg-subtle);
+}
+.budget-card .lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 6px;
+}
+.budget-card .bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.budget-card .bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition:
+    width var(--motion-base) var(--ease-out),
+    background var(--motion-base) var(--ease-out);
+}
+.budget-card.over .bar > i {
+  background: var(--fail);
+}
+.budget-card.over .total {
+  color: var(--fail);
+}
+
+/* tasks grid */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.task-row {
+  display: grid;
+  grid-template-columns: 22px 1fr 110px 28px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px 8px 6px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+.task-row:hover {
+  border-color: var(--border-strong);
+}
+.task-row .handle {
+  display: grid;
+  place-items: center;
+  color: var(--fg-faint);
+  cursor: grab;
+}
+.task-row input.tname {
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.task-row input.tname:focus {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--accent-ring);
+}
+.task-row .dur {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  height: 26px;
+}
+.task-row .dur input {
+  width: 100%;
+  padding: 0 8px;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.task-row .dur .unit {
+  padding: 0 8px;
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  border-left: 1px solid var(--border);
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+}
+.task-row .trm {
+  background: transparent;
+  border: 0;
+  color: var(--fg-faint);
+  border-radius: 4px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  height: 26px;
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out);
+}
+.task-row .trm:hover {
+  color: #fca5a5;
+  background: var(--fail-soft);
+}
+
+.add-task {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  width: 100%;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+.add-task:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+  color: var(--fg);
+}
+
+/* ── Cycle cards (TestCyclesPanel) ────────────────────────── */
+.cycle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cycle-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out);
+}
+.cycle-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+.cycle-card .cycid {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.cycle-card .cycname {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.cycle-card .cycmeta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--fg-subtle);
+}
+.cycle-card .cycmeta .mono {
+  color: var(--fg-muted);
+}
+.cycle-card .cycprog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  margin-top: 8px;
+}
+.cycle-card .cycprog .bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+}
+.cycle-card .cycprog .bar > i {
+  height: 100%;
+  transition: width var(--motion-slow) var(--ease-out);
+}
+.cycle-card .cycprog .bar > i.pass {
+  background: var(--pass);
+}
+.cycle-card .cycprog .bar > i.fail {
+  background: var(--fail);
+}
+.cycle-card .cycprog .bar > i.blocked {
+  background: var(--blocked);
+}
+.cycle-card .cycprog .num {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cycle-card .cycactions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}

@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
-import { Download, RefreshCw, X } from 'lucide-react'
+import { Check, RefreshCw, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@renderer/components/ui/button'
 import { useSettingsStore } from '@renderer/stores/settings'
@@ -93,6 +93,7 @@ export function UpdateBanner(): React.JSX.Element | null {
   if (state.phase === 'idle') return null
 
   const versionLabel = state.info?.version ? `v${state.info.version}` : 'new version'
+  const pct = Math.round(state.progress?.percent ?? 0)
 
   const handleDownload = async (): Promise<void> => {
     setState((s) => ({ ...s, phase: 'downloading' }))
@@ -115,61 +116,76 @@ export function UpdateBanner(): React.JSX.Element | null {
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center justify-between gap-3 border-b bg-primary/10 px-6 py-2 text-sm"
+      className="relative flex items-center gap-3 border-b border-[rgba(139,92,246,0.18)] bg-[var(--accent-tint)] px-4 py-2.5 text-[12.5px]"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        {state.phase === 'downloading' ? (
-          <RefreshCw className="size-4 shrink-0 animate-spin text-primary" />
-        ) : (
-          <Download className="size-4 shrink-0 text-primary" />
+      {/* Left icon badge */}
+      <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-hover)]">
+        {state.phase === 'available' && <Sparkles size={12} aria-hidden="true" />}
+        {state.phase === 'downloading' && (
+          <RefreshCw size={12} aria-hidden="true" className="anim-spin" />
         )}
-        <BannerMessage state={state} versionLabel={versionLabel} />
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
+        {state.phase === 'downloaded' && <Check size={12} aria-hidden="true" />}
+      </span>
+
+      {/* Message */}
+      <span className="flex-1 text-foreground">
         {state.phase === 'available' && (
-          <Button size="sm" onClick={handleDownload}>
-            Download
-          </Button>
+          <>
+            <strong className="font-semibold">Update available</strong> — {versionLabel} is ready to
+            download.
+          </>
+        )}
+        {state.phase === 'downloading' && (
+          <>
+            <strong className="font-semibold">Downloading update</strong> · {pct}%
+          </>
         )}
         {state.phase === 'downloaded' && (
-          <Button size="sm" onClick={handleInstall}>
-            Install and restart
+          <>
+            <strong className="font-semibold">Update ready</strong> — Install when you&apos;re
+            ready. Your work is preserved.
+          </>
+        )}
+      </span>
+
+      {/* Actions */}
+      <span className="flex shrink-0 items-center gap-1.5">
+        {state.phase === 'available' && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[11.5px] text-[var(--fg-subtle)] hover:text-foreground"
+            >
+              Release notes
+            </Button>
+            <Button size="sm" className="h-6 px-2.5 text-[11.5px]" onClick={handleDownload}>
+              Download
+            </Button>
+          </>
+        )}
+        {state.phase === 'downloaded' && (
+          <Button size="sm" className="h-6 px-2.5 text-[11.5px]" onClick={handleInstall}>
+            Install &amp; restart
           </Button>
         )}
-        <Button variant="ghost" size="icon-sm" onClick={handleDismiss} aria-label="Dismiss">
-          <X className="size-4" />
-        </Button>
-      </div>
+        <button
+          onClick={handleDismiss}
+          aria-label="Dismiss update banner"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-[var(--fg-muted)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-3)] hover:text-foreground"
+        >
+          <X size={13} aria-hidden="true" />
+        </button>
+      </span>
+
+      {/* Progress line at bottom edge during downloading */}
+      {state.phase === 'downloading' && (
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 h-[2px] bg-primary transition-[width] duration-[var(--duration-slow)] ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      )}
     </div>
   )
-}
-
-function BannerMessage({
-  state,
-  versionLabel
-}: {
-  state: BannerState
-  versionLabel: string
-}): React.JSX.Element {
-  if (state.phase === 'available') {
-    return (
-      <p className="truncate">
-        An update is available <span className="font-medium">({versionLabel})</span>. Download now?
-      </p>
-    )
-  }
-  if (state.phase === 'downloading') {
-    const pct = Math.round(state.progress?.percent ?? 0)
-    return (
-      <p className="truncate">
-        Downloading update {versionLabel} — <span className="font-medium">{pct}%</span>
-      </p>
-    )
-  }
-  if (state.phase === 'downloaded') {
-    return (
-      <p className="truncate">Update {versionLabel} downloaded. Install and restart to apply.</p>
-    )
-  }
-  return <p className="truncate">Checking for updates…</p>
 }

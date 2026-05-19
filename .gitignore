@@ -72,3 +72,10 @@ Brain/.obsidian/workspace-mobile.json
 Brain/.obsidian/workspaces.json
 Brain/.obsidian/cache
 Brain/.trash/
+
+# macOS resource fork artifacts (created when unzipping on Windows from a Mac zip)
+__MACOSX/
+**/__MACOSX/
+
+# Design source archives — keep extracted folder as reference, drop zips
+Brain/*.zip

@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
-import { Separator } from '@renderer/components/ui/separator'
 import { TestCaseForm } from '@renderer/components/cases/TestCaseForm'
 
 export const Route = createFileRoute('/projects/$projectId/cases/new')({
@@ -12,40 +11,40 @@ function NewCaseRoute(): React.JSX.Element {
   const navigate = useNavigate()
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
-      {/* Back navigation */}
-      <Link
-        to="/projects/$projectId"
-        params={{ projectId }}
-        search={{ tab: 'cases' }}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3.5" />
-        Back to cases
-      </Link>
+    <div className="overflow-y-auto scrollbar-thin py-5 px-9 pb-16">
+      <div className="max-w-[920px] mx-auto">
+        {/* Back breadcrumb */}
+        <Link
+          to="/projects/$projectId"
+          params={{ projectId }}
+          search={{ tab: 'cases' }}
+          className="inline-flex items-center gap-1.5 text-[12px] text-[var(--fg-subtle)] mb-4 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3" />
+          <span>Back</span>
+          <span className="text-[var(--fg-faint)]">›</span>
+          <span className="text-[var(--fg-muted)]">Test cases</span>
+        </Link>
 
-      {/* Page header */}
-      <div className="mt-5 mb-6">
-        <div className="mb-1">
-          <span className="inline-flex items-center rounded-md border bg-muted px-2.5 py-0.5 font-mono text-xs font-medium text-muted-foreground">
+        {/* NEW pill */}
+        <div className="mb-3">
+          <span className="inline-flex items-center h-5 px-2 rounded bg-[var(--surface-2)] border border-[var(--border)] font-mono text-[10.5px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
             NEW
           </span>
         </div>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight">New test case</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Fill in the details below. A unique ID will be assigned on creation.
-        </p>
+
+        <TestCaseForm
+          projectId={projectId}
+          mode="create"
+          onDone={() =>
+            void navigate({
+              to: '/projects/$projectId',
+              params: { projectId },
+              search: { tab: 'cases' }
+            })
+          }
+        />
       </div>
-
-      <Separator className="mb-6" />
-
-      <TestCaseForm
-        projectId={projectId}
-        mode="create"
-        onDone={() =>
-          navigate({ to: '/projects/$projectId', params: { projectId }, search: { tab: 'cases' } })
-        }
-      />
     </div>
   )
 }

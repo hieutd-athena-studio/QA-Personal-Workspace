@@ -1,15 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
+import { Check, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@renderer/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from '@renderer/components/ui/dialog'
-import { Input } from '@renderer/components/ui/input'
 import { useTestCases } from '@renderer/hooks/useTestCases'
 import { useSetTestTypeCases, useTestTypeCases } from '@renderer/hooks/useTestTypes'
 
@@ -36,10 +35,9 @@ export function ManageTypeCasesDialog({
     setSelected(new Set(memberIds ?? []))
   }, [memberIds])
 
+  const lc = filter.trim().toLowerCase()
   const filtered = (cases ?? []).filter(
-    (c) =>
-      c.name.toLowerCase().includes(filter.toLowerCase()) ||
-      c.display_id.toLowerCase().includes(filter.toLowerCase())
+    (c) => c.name.toLowerCase().includes(lc) || c.display_id.toLowerCase().includes(lc)
   )
 
   const toggle = (id: string): void => {
@@ -48,6 +46,19 @@ export function ManageTypeCasesDialog({
     else next.add(id)
     setSelected(next)
   }
+
+  const allShownSelected = filtered.length > 0 && filtered.every((c) => selected.has(c.id))
+
+  const toggleAll = (): void => {
+    const next = new Set(selected)
+    if (allShownSelected) filtered.forEach((c) => next.delete(c.id))
+    else filtered.forEach((c) => next.add(c.id))
+    setSelected(next)
+  }
+
+  const initialCount = memberIds?.length ?? 0
+  const added = Math.max(0, selected.size - initialCount)
+  const removed = (memberIds ?? []).filter((id) => !selected.has(id)).length
 
   const save = (): void => {
     setCases.mutate(
@@ -64,51 +75,138 @@ export function ManageTypeCasesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Manage cases in type</DialogTitle>
+      <DialogContent className="w-[640px] max-w-[calc(100%-3rem)] overflow-hidden rounded-[var(--radius-lg)] border-[var(--border-strong)] bg-[var(--surface-2)] p-0 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.55)] anim-dialog-in">
+        {/* Header */}
+        <DialogHeader className="px-[22px] pb-1 pt-[18px]">
+          <DialogTitle className="text-[16px] font-semibold tracking-[-0.005em] text-foreground">
+            Manage cases in type
+          </DialogTitle>
+          <DialogDescription className="text-[12.5px] text-[var(--fg-muted)]">
+            Toggle which test cases belong to this type.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Input
-            placeholder="Filter cases…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-          <div className="max-h-96 overflow-auto rounded-md border">
-            {filtered.length === 0 ? (
-              <p className="p-4 text-center text-sm text-muted-foreground">No cases.</p>
-            ) : (
-              <ul className="divide-y">
-                {filtered.map((c) => (
-                  <li key={c.id}>
-                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-accent/40">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(c.id)}
-                        onChange={() => toggle(c.id)}
-                      />
-                      <span className="w-24 shrink-0 font-mono text-xs text-muted-foreground">
-                        {c.display_id}
-                      </span>
-                      <span className="flex-1 truncate">{c.name}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
+
+        {/* Body */}
+        <div className="px-[22px] pb-0 pt-2">
+          {/* Search input */}
+          <div className="relative mb-3 flex items-center">
+            <Search
+              className="pointer-events-none absolute left-[9px] size-3.5 text-[var(--fg-subtle)]"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              placeholder="Search test cases…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] pl-[30px] pr-[30px] text-[13px] text-foreground outline-none placeholder:text-[var(--fg-faint)] transition-colors focus:border-[var(--accent-ring)] focus:bg-[var(--surface-2)]"
+            />
+            {filter && (
+              <button
+                className="absolute right-1.5 grid size-5 place-items-center rounded text-[var(--fg-subtle)] transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                onClick={() => setFilter('')}
+                aria-label="Clear filter"
+              >
+                <X className="size-3" />
+              </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {selected.size} of {(cases ?? []).length} selected
-          </p>
+
+          {/* Checklist */}
+          <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)]">
+            {/* Header row with select-all */}
+            <div className="flex items-center gap-2 border-b border-[var(--border)] bg-white/[0.02] px-2.5 py-2">
+              <button
+                className={[
+                  'grid size-[14px] shrink-0 place-items-center rounded-[3px] border-[1.2px] transition-[background,border-color] duration-[120ms]',
+                  allShownSelected
+                    ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                    : 'border-[var(--border-strong)] bg-[var(--surface-1)]'
+                ].join(' ')}
+                onClick={toggleAll}
+                aria-label="Toggle all shown"
+              >
+                {allShownSelected && <Check className="size-[10px]" strokeWidth={2.4} />}
+              </button>
+              <span className="text-[12px] text-[var(--fg-muted)]">
+                {allShownSelected ? 'Deselect all' : 'Select all'}
+                {lc && ` (${filtered.length} matching)`}
+              </span>
+              <span className="ml-auto font-mono text-[11.5px] text-[var(--fg-muted)]">
+                {selected.size} of {(cases ?? []).length} selected
+              </span>
+            </div>
+
+            {/* Case list */}
+            <div className="max-h-80 overflow-y-auto scrollbar-thin">
+              {filtered.length === 0 ? (
+                <p className="px-4 py-8 text-center text-[12px] text-[var(--fg-subtle)]">
+                  No cases match.
+                </p>
+              ) : (
+                filtered.map((c, idx) => {
+                  const isChecked = selected.has(c.id)
+                  return (
+                    <div
+                      key={c.id}
+                      className={[
+                        'grid cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors duration-[120ms]',
+                        isChecked ? 'bg-[var(--accent-tint)]' : 'hover:bg-white/[0.03]',
+                        idx > 0 ? 'border-t border-[var(--border-soft)]' : ''
+                      ].join(' ')}
+                      style={{ gridTemplateColumns: '18px auto 1fr auto' }}
+                      onClick={() => toggle(c.id)}
+                      role="checkbox"
+                      aria-checked={isChecked}
+                    >
+                      <span
+                        className={[
+                          'grid size-[14px] shrink-0 place-items-center rounded-[3px] border-[1.2px] transition-[background,border-color] duration-[120ms]',
+                          isChecked
+                            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                            : 'border-[var(--border-strong)] bg-[var(--surface-1)]'
+                        ].join(' ')}
+                      >
+                        <Check
+                          className="size-[10px]"
+                          strokeWidth={2.4}
+                          style={{ opacity: isChecked ? 1 : 0, transition: 'opacity 120ms' }}
+                        />
+                      </span>
+                      <span className="font-mono text-[11.5px] text-[var(--fg-subtle)]">
+                        {c.display_id}
+                      </span>
+                      <span className="truncate text-[12.5px] text-foreground">{c.name}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 border-t border-[var(--border)] px-[22px] py-3.5">
+          <span className="mr-auto text-[11.5px] text-[var(--fg-subtle)]">
+            <span className="font-mono">+{added}</span> added,{' '}
+            <span className="font-mono">−{removed}</span> removed
+          </span>
+          <button
+            type="button"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[13px] font-medium text-foreground transition-[background,border-color] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)]"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
-          </Button>
-          <Button onClick={save} disabled={setCases.isPending}>
-            Save
-          </Button>
-        </DialogFooter>
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            onClick={save}
+            disabled={setCases.isPending}
+          >
+            {setCases.isPending ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )

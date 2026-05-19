@@ -1,11 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Download, FileJson, FolderPlus, Plus, Search, Trash2, Upload } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  Download,
+  FolderPlus,
+  Layers,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@renderer/components/ui/button'
-import { Input } from '@renderer/components/ui/input'
-import { Card, CardContent } from '@renderer/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@renderer/components/ui/alert-dialog'
 import { useCategories } from '@renderer/hooks/useCategories'
 import {
   useExportTestCases,
@@ -23,8 +42,11 @@ interface Props {
 
 export function CasesPane({ projectId }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
+  const [debounced, setDebounced] = useState('')
   const [catDialogOpen, setCatDialogOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const qc = useQueryClient()
   const { data: cats } = useCategories(projectId)
@@ -33,27 +55,41 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
   const exportCases = useExportTestCases(projectId)
   const importCases = useImportTestCases(projectId)
 
-  const topCats = (cats ?? []).filter((c) => !c.parent_category_id)
-  const subsByParent = new Map<string, Category[]>()
-  for (const c of cats ?? []) {
-    if (c.parent_category_id) {
-      const arr = subsByParent.get(c.parent_category_id) ?? []
-      arr.push(c)
-      subsByParent.set(c.parent_category_id, arr)
-    }
-  }
+  // Debounce — controls the pulse-line indicator
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 200)
+    return () => clearTimeout(t)
+  }, [query])
+  const searching = query.trim() !== debounced.trim()
 
-  const casesBySubcat = new Map<string, TestCase[]>()
-  const orphanCases: TestCase[] = []
-  for (const tc of cases ?? []) {
-    if (tc.subcategory_id) {
-      const arr = casesBySubcat.get(tc.subcategory_id) ?? []
-      arr.push(tc)
-      casesBySubcat.set(tc.subcategory_id, arr)
-    } else {
-      orphanCases.push(tc)
+  // Category tree
+  const topCats = (cats ?? []).filter((c) => !c.parent_category_id)
+  const subsByParent = useMemo(() => {
+    const m = new Map<string, Category[]>()
+    for (const c of cats ?? []) {
+      if (c.parent_category_id) {
+        const arr = m.get(c.parent_category_id) ?? []
+        arr.push(c)
+        m.set(c.parent_category_id, arr)
+      }
     }
-  }
+    return m
+  }, [cats])
+
+  const casesBySubcat = useMemo(() => {
+    const m = new Map<string, TestCase[]>()
+    const orphans: TestCase[] = []
+    for (const tc of cases ?? []) {
+      if (tc.subcategory_id) {
+        const arr = m.get(tc.subcategory_id) ?? []
+        arr.push(tc)
+        m.set(tc.subcategory_id, arr)
+      } else {
+        orphans.push(tc)
+      }
+    }
+    return { bySubcat: m, orphans }
+  }, [cases])
 
   const toggleSelect = (id: string): void => {
     setSelectedIds((prev) => {
@@ -64,14 +100,17 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
     })
   }
 
+  const toggleCat = (catId: string): void => {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev)
+      if (next.has(catId)) next.delete(catId)
+      else next.add(catId)
+      return next
+    })
+  }
+
   const handleBatchDelete = async (): Promise<void> => {
     if (selectedIds.size === 0) return
-    if (
-      !window.confirm(
-        `Delete ${selectedIds.size} test case${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`
-      )
-    )
-      return
     setDeleting(true)
     try {
       await Promise.all([...selectedIds].map((id) => window.api.cases.delete(id)))
@@ -82,6 +121,7 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
       toast.error((e as Error).message)
     } finally {
       setDeleting(false)
+      setDeleteDialogOpen(false)
     }
   }
 
@@ -141,15 +181,12 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
           throw new Error('expected array of test cases or object with test_cases key')
         }
 
-        // Build mutable categories list — we'll append newly created ones
         let allCats = cats ?? []
         let created = 0
 
         if (isExternal) {
-          // Collect unique parent category names not yet in DB
           const neededParents = new Set<string>()
-          const neededSubs = new Map<string, string>() // subName → parentName
-
+          const neededSubs = new Map<string, string>()
           for (const tc of rawCases) {
             const parentName = tc.category?.trim()
             const subName = tc.subcategory?.trim()
@@ -161,12 +198,8 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
             ) {
               neededParents.add(parentName)
             }
-            if (subName && parentName) {
-              neededSubs.set(subName, parentName)
-            }
+            if (subName && parentName) neededSubs.set(subName, parentName)
           }
-
-          // Create missing parent categories sequentially
           for (const parentName of neededParents) {
             const newCat = await window.api.categories.create({
               project_id: projectId,
@@ -176,8 +209,6 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
             allCats = [...allCats, newCat]
             created++
           }
-
-          // Create missing subcategories
           for (const [subName, parentName] of neededSubs) {
             const alreadyExists = allCats.some(
               (c) => c.parent_category_id !== null && c.name.toLowerCase() === subName.toLowerCase()
@@ -197,17 +228,12 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
               }
             }
           }
-
-          if (created > 0) {
-            void qc.invalidateQueries({ queryKey: ['categories', projectId] })
-          }
+          if (created > 0) void qc.invalidateQueries({ queryKey: ['categories', projectId] })
         }
 
         let matched = 0
-
         const normalized = rawCases.map((tc) => {
           let subcategoryId: string | null = tc.subcategory_id ?? null
-
           if (isExternal && tc.subcategory) {
             const found = allCats.find(
               (c) =>
@@ -219,7 +245,6 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
               matched++
             }
           }
-
           return {
             project_id: projectId,
             subcategory_id: subcategoryId,
@@ -227,13 +252,9 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
             description: tc.description ?? null,
             expected_result: tc.expected_result ?? null,
             version: tc.version ?? '1.0',
-            steps: (tc.steps ?? []).map((s) => ({
-              action: s.action,
-              expected: s.expected ?? ''
-            }))
+            steps: (tc.steps ?? []).map((s) => ({ action: s.action, expected: s.expected ?? '' }))
           }
         })
-
         importCases.mutate(normalized, {
           onSuccess: (n) =>
             toast.success(
@@ -250,122 +271,301 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
     input.click()
   }
 
+  const isSearching = Boolean(query.trim())
+  const totalCases = (cases ?? []).length
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search cases by ID, name, description…"
-            className="pl-9"
+    <div className="relative">
+      {/* Toolbar */}
+      <div className="mb-[22px] flex flex-wrap items-center gap-2">
+        {/* Animated search input */}
+        <div className="relative flex min-w-0 max-w-[360px] flex-1 items-center">
+          <Search
+            className="pointer-events-none absolute left-[9px] size-3.5 text-[var(--fg-subtle)]"
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            placeholder="Search test cases…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] pl-[30px] pr-[30px] text-[13px] text-foreground outline-none placeholder:text-[var(--fg-faint)] transition-colors focus:border-[var(--accent-ring)] focus:bg-[var(--surface-2)]"
+          />
+          {query && (
+            <button
+              className="absolute right-1.5 grid size-5 place-items-center rounded text-[var(--fg-subtle)] transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+          {/* Pulse line indicator */}
+          <span
+            className="pointer-events-none absolute bottom-[-1px] left-2 right-2 h-[1.5px] rounded-full bg-[var(--accent)]"
+            style={{
+              opacity: searching ? 1 : 0,
+              transformOrigin: 'left',
+              animation: searching ? 'pulseLine 800ms infinite var(--ease-out-back)' : 'none',
+              transition: 'opacity 120ms'
+            }}
+            aria-hidden="true"
           />
         </div>
-        {selectedIds.size > 0 && (
-          <Button variant="destructive" size="sm" disabled={deleting} onClick={handleBatchDelete}>
-            <Trash2 className="mr-2 size-4" />
-            Delete ({selectedIds.size})
-          </Button>
-        )}
-        <Button variant="outline" size="sm" onClick={() => setCatDialogOpen(true)}>
-          <FolderPlus className="mr-2 size-4" /> Category
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleImport}>
-          <Upload className="mr-2 size-4" /> Import
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleExport}>
-          <Download className="mr-2 size-4" /> Export
-        </Button>
-        <Button size="sm" asChild>
-          <Link to="/projects/$projectId/cases/new" params={{ projectId }}>
-            <Plus className="mr-2 size-4" /> New case
-          </Link>
-        </Button>
+
+        <GhostBtn
+          icon={<Layers className="size-[13px]" />}
+          label="Category"
+          onClick={() => setCatDialogOpen(true)}
+        />
+        <GhostBtn icon={<Upload className="size-[13px]" />} label="Import" onClick={handleImport} />
+        <GhostBtn
+          icon={<Download className="size-[13px]" />}
+          label="Export"
+          onClick={handleExport}
+        />
+        <span className="flex-1" />
+        <Link
+          to="/projects/$projectId/cases/new"
+          params={{ projectId }}
+          className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+        >
+          <Sparkles className="size-[13px]" />
+          New case
+        </Link>
       </div>
 
-      {query && (
-        <Card>
-          <CardContent className="py-3">
-            <p className="mb-2 text-sm text-muted-foreground">
-              {searchResults?.length ?? 0} results for &quot;{query}&quot;
-            </p>
-            <CaseRowList
-              cases={searchResults ?? []}
-              projectId={projectId}
-              selectedIds={selectedIds}
-              onToggle={toggleSelect}
+      {/* Search results */}
+      {isSearching && (
+        <div>
+          {(searchResults ?? []).length === 0 ? (
+            <EmptyState
+              icon={<Search className="size-5 text-[var(--fg-faint)]" />}
+              headline={`No matches for "${debounced}"`}
+              sub="Try a different query or clear the search."
             />
-          </CardContent>
-        </Card>
+          ) : (
+            <div>
+              <p className="mb-2.5 text-[12px] text-[var(--fg-muted)]">
+                <strong className="font-semibold text-foreground">{searchResults!.length}</strong>{' '}
+                case{searchResults!.length === 1 ? '' : 's'} matching &quot;{debounced}&quot;
+              </p>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-2">
+                {(searchResults ?? []).map((c) => (
+                  <CaseRow
+                    key={c.id}
+                    tc={c}
+                    projectId={projectId}
+                    selected={selectedIds.has(c.id)}
+                    onToggle={() => toggleSelect(c.id)}
+                    showMeta
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {!query && (
+      {/* Grouped category tree */}
+      {!isSearching && (
         <>
-          {(cases ?? []).length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <FileJson className="size-8 text-muted-foreground" />
-                <p className="text-sm">No test cases yet.</p>
-                <Button size="sm" asChild>
-                  <Link to="/projects/$projectId/cases/new" params={{ projectId }}>
-                    <Plus className="mr-2 size-4" /> New case
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+          {totalCases === 0 && topCats.length === 0 && (
+            <EmptyState
+              icon={<Sparkles className="size-5 text-[var(--fg-faint)]" />}
+              headline="No test cases yet"
+              sub="Create your first test case to get started."
+              cta={
+                <Link
+                  to="/projects/$projectId/cases/new"
+                  params={{ projectId }}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+                >
+                  <Plus className="size-3.5" />
+                  New case
+                </Link>
+              }
+            />
           )}
 
-          {topCats.length === 0 && orphanCases.length > 0 && (
-            <Card>
-              <CardContent className="py-3">
-                <CaseRowList
-                  cases={orphanCases}
+          {/* Orphan cases (no subcategory, no parent cats) */}
+          {casesBySubcat.orphans.length > 0 && topCats.length === 0 && (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-2">
+              {casesBySubcat.orphans.map((c) => (
+                <CaseRow
+                  key={c.id}
+                  tc={c}
                   projectId={projectId}
-                  selectedIds={selectedIds}
-                  onToggle={toggleSelect}
+                  selected={selectedIds.has(c.id)}
+                  onToggle={() => toggleSelect(c.id)}
                 />
-              </CardContent>
-            </Card>
+              ))}
+            </div>
           )}
 
-          {topCats.map((cat) => (
-            <Card key={cat.id}>
-              <CardContent className="py-3">
-                <h3 className="mb-2 text-sm font-semibold">{cat.name}</h3>
-                {(subsByParent.get(cat.id) ?? []).map((sub) => (
-                  <div key={sub.id} className="mb-3">
-                    <p className="mb-1 text-xs font-medium text-muted-foreground">{sub.name}</p>
-                    <CaseRowList
-                      cases={casesBySubcat.get(sub.id) ?? []}
-                      projectId={projectId}
-                      selectedIds={selectedIds}
-                      onToggle={toggleSelect}
-                    />
-                  </div>
-                ))}
-                {(subsByParent.get(cat.id) ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">No subcategories.</p>
+          {topCats.map((cat) => {
+            const subs = subsByParent.get(cat.id) ?? []
+            const total =
+              subs.reduce((s, sub) => s + (casesBySubcat.bySubcat.get(sub.id)?.length ?? 0), 0) +
+              (casesBySubcat.bySubcat.get(cat.id)?.length ?? 0)
+            const isCollapsed = collapsedCats.has(cat.id)
+
+            return (
+              <section key={cat.id} className="mb-7">
+                {/* Category header */}
+                <header
+                  className={[
+                    'mb-1.5 flex items-baseline gap-3 border-b border-[var(--border)] pb-2.5',
+                    isCollapsed ? '[&_.toggle-icon]:rotate-[-90deg]' : ''
+                  ].join(' ')}
+                >
+                  <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-foreground m-0">
+                    {cat.name}
+                  </h3>
+                  <span className="font-mono text-[11px] text-[var(--fg-subtle)]">{total}</span>
+                  <button
+                    className="toggle-icon ml-auto grid size-6 place-items-center rounded text-[var(--fg-subtle)] transition-[background,color,transform] duration-200 hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => toggleCat(cat.id)}
+                    aria-label={isCollapsed ? `Expand ${cat.name}` : `Collapse ${cat.name}`}
+                    aria-expanded={!isCollapsed}
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </header>
+
+                {!isCollapsed && (
+                  <>
+                    {subs.map((sub) => {
+                      const subCases = casesBySubcat.bySubcat.get(sub.id) ?? []
+                      return (
+                        <div key={sub.id} className="mb-[18px] mt-2">
+                          <div className="flex items-center gap-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--fg-subtle)]">
+                            <span>{sub.name}</span>
+                            <span className="font-mono text-[10.5px] font-medium normal-case tracking-normal text-[var(--fg-faint)]">
+                              {subCases.length}
+                            </span>
+                          </div>
+                          {subCases.length === 0 ? (
+                            <p className="py-1 pl-1 text-[12px] text-[var(--fg-faint)]">
+                              No cases.
+                            </p>
+                          ) : (
+                            subCases.map((c) => (
+                              <CaseRow
+                                key={c.id}
+                                tc={c}
+                                projectId={projectId}
+                                selected={selectedIds.has(c.id)}
+                                onToggle={() => toggleSelect(c.id)}
+                              />
+                            ))
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Direct-cat orphan cases (attached to cat but no sub) */}
+                    {(casesBySubcat.bySubcat.get(cat.id) ?? []).map((c) => (
+                      <CaseRow
+                        key={c.id}
+                        tc={c}
+                        projectId={projectId}
+                        selected={selectedIds.has(c.id)}
+                        onToggle={() => toggleSelect(c.id)}
+                      />
+                    ))}
+
+                    {subs.length === 0 &&
+                      (casesBySubcat.bySubcat.get(cat.id) ?? []).length === 0 && (
+                        <p className="py-2 pl-1 text-[12px] text-[var(--fg-faint)]">
+                          No subcategories or cases.
+                        </p>
+                      )}
+                  </>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+              </section>
+            )
+          })}
 
-          {orphanCases.length > 0 && topCats.length > 0 && (
-            <Card>
-              <CardContent className="py-3">
-                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Uncategorized</h3>
-                <CaseRowList
-                  cases={orphanCases}
+          {/* Orphan cases when cats exist */}
+          {casesBySubcat.orphans.length > 0 && topCats.length > 0 && (
+            <section className="mb-7">
+              <header className="mb-1.5 flex items-baseline gap-3 border-b border-[var(--border)] pb-2.5">
+                <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-[var(--fg-muted)] m-0">
+                  Uncategorized
+                </h3>
+                <span className="font-mono text-[11px] text-[var(--fg-subtle)]">
+                  {casesBySubcat.orphans.length}
+                </span>
+              </header>
+              {casesBySubcat.orphans.map((c) => (
+                <CaseRow
+                  key={c.id}
+                  tc={c}
                   projectId={projectId}
-                  selectedIds={selectedIds}
-                  onToggle={toggleSelect}
+                  selected={selectedIds.has(c.id)}
+                  onToggle={() => toggleSelect(c.id)}
                 />
-              </CardContent>
-            </Card>
+              ))}
+            </section>
           )}
         </>
       )}
+
+      {/* Selection action bar */}
+      {selectedIds.size > 0 && (
+        <div className="anim-selbar-in pointer-events-none absolute bottom-6 right-6 z-50">
+          <div
+            className="pointer-events-auto flex items-center gap-1.5 rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-2)] pl-3.5 pr-1.5 py-1.5"
+            style={{
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 14px 40px rgba(0,0,0,0.45)'
+            }}
+            role="toolbar"
+            aria-label="Selection actions"
+          >
+            <span className="text-[12.5px] font-medium text-[var(--fg-muted)]">
+              <b className="font-mono font-semibold text-foreground">{selectedIds.size}</b> selected
+            </span>
+            <span className="mx-0.5 h-[18px] w-px bg-[var(--border)]" aria-hidden="true" />
+            <SelBarBtn icon={<Layers className="size-3.5" />} title="Add to test type" />
+            <SelBarBtn icon={<FolderPlus className="size-3.5" />} title="Move to subcategory" />
+            <span className="mx-0.5 h-[18px] w-px bg-[var(--border)]" aria-hidden="true" />
+            <SelBarBtn
+              icon={<Trash2 className="size-3.5" />}
+              title="Delete selected"
+              danger
+              onClick={() => setDeleteDialogOpen(true)}
+            />
+            <SelBarBtn
+              icon={<X className="size-3.5" />}
+              title="Clear selection"
+              onClick={() => setSelectedIds(new Set())}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Batch delete confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedIds.size} case{selectedIds.size > 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => void handleBatchDelete()}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <NewProjectCategoryDialog
         projectId={projectId}
@@ -377,50 +577,146 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
   )
 }
 
-function CaseRowList({
-  cases,
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function CaseRow({
+  tc,
   projectId,
-  selectedIds,
-  onToggle
+  selected,
+  onToggle,
+  showMeta = false
 }: {
-  cases: TestCase[]
+  tc: TestCase
   projectId: string
-  selectedIds: Set<string>
-  onToggle: (id: string) => void
+  selected: boolean
+  onToggle: () => void
+  showMeta?: boolean
 }): React.JSX.Element {
-  if (cases.length === 0) {
-    return <p className="text-xs text-muted-foreground">No cases.</p>
-  }
   return (
-    <ul className="divide-y rounded-md border">
-      {cases.map((c) => (
-        <li key={c.id} className="flex items-center">
-          <label
-            className="flex cursor-pointer items-center px-3 py-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              type="checkbox"
-              checked={selectedIds.has(c.id)}
-              onChange={() => onToggle(c.id)}
-              className="size-4 cursor-pointer accent-primary"
-            />
-          </label>
-          <Link
-            to="/projects/$projectId/cases/$caseId"
-            params={{ projectId, caseId: c.id }}
-            className="flex flex-1 items-center gap-3 py-2 pr-3 text-sm hover:bg-accent/40"
-          >
-            <span className="w-24 shrink-0 font-mono text-xs text-muted-foreground">
-              {c.display_id}
-            </span>
-            <span className="flex-1 truncate">{c.name}</span>
-            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-              v{c.version}
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div
+      className={[
+        'group relative grid h-9 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border-l-2 py-0 pl-[9px] pr-3 transition-[background,border-color] duration-[120ms]',
+        selected
+          ? 'border-[var(--accent)] bg-[var(--accent-tint)]'
+          : 'border-transparent hover:bg-white/[0.03]'
+      ].join(' ')}
+      style={{ gridTemplateColumns: '18px auto 1fr auto auto' }}
+    >
+      {/* Checkbox */}
+      <button
+        className={[
+          'grid size-[14px] shrink-0 place-items-center rounded-[3px] border-[1.2px] transition-[background,border-color] duration-[120ms]',
+          selected
+            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+            : 'border-[var(--border-strong)] bg-[var(--surface-1)] group-hover:border-[var(--fg-subtle)]'
+        ].join(' ')}
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggle()
+        }}
+        aria-label="Select case"
+        aria-pressed={selected}
+      >
+        <Check
+          className="size-[10px]"
+          strokeWidth={2.4}
+          style={{ opacity: selected ? 1 : 0, transition: 'opacity 120ms' }}
+        />
+      </button>
+
+      {/* ID */}
+      <span className="min-w-[64px] font-mono text-[11.5px] text-[var(--fg-subtle)]">
+        {tc.display_id}
+      </span>
+
+      {/* Name + meta */}
+      <Link
+        to="/projects/$projectId/cases/$caseId"
+        params={{ projectId, caseId: tc.id }}
+        className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-foreground"
+        tabIndex={-1}
+      >
+        {tc.name}
+        {showMeta && (
+          <span className="ml-2 font-mono text-[10.5px] text-[var(--fg-faint)]">
+            {/* category info not available directly on TestCase — skip in search view */}
+          </span>
+        )}
+      </Link>
+
+      {/* Version pill */}
+      <span className="rounded-full border border-[var(--border)] bg-white/[0.04] px-[7px] py-px font-mono text-[10.5px] text-[var(--fg-subtle)]">
+        {tc.version}
+      </span>
+    </div>
+  )
+}
+
+function GhostBtn({
+  icon,
+  label,
+  onClick
+}: {
+  icon: React.ReactNode
+  label: string
+  onClick?: () => void
+}): React.JSX.Element {
+  return (
+    <button
+      className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-transparent bg-transparent px-3 text-[13px] font-medium text-[var(--fg-muted)] transition-[background,color] hover:bg-white/[0.04] hover:text-foreground"
+      onClick={onClick}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+function SelBarBtn({
+  icon,
+  title,
+  danger = false,
+  onClick
+}: {
+  icon: React.ReactNode
+  title: string
+  danger?: boolean
+  onClick?: () => void
+}): React.JSX.Element {
+  return (
+    <button
+      className={[
+        'grid size-7 place-items-center rounded-[6px] transition-[background,color] duration-[120ms]',
+        danger
+          ? 'text-[#fca5a5] hover:bg-[var(--fail-soft)] hover:text-[#fecaca]'
+          : 'text-[var(--fg-muted)] hover:bg-white/[0.06] hover:text-foreground'
+      ].join(' ')}
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+    >
+      {icon}
+    </button>
+  )
+}
+
+function EmptyState({
+  icon,
+  headline,
+  sub,
+  cta
+}: {
+  icon: React.ReactNode
+  headline: string
+  sub: string
+  cta?: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] px-6 py-12 text-center text-[var(--fg-muted)]">
+      <div className="mb-3 flex justify-center">{icon}</div>
+      <h4 className="mb-1 text-[14px] font-semibold text-foreground">{headline}</h4>
+      <p className="mb-4 text-[13px]">{sub}</p>
+      {cta}
+    </div>
   )
 }

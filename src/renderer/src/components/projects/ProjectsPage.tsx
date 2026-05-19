@@ -1,4 +1,4 @@
-import { FolderOpen, Plus } from 'lucide-react'
+import { Layers, Sparkles } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { useProjects } from '@renderer/hooks/useProjects'
 import { useUIStore } from '@renderer/stores/ui'
@@ -12,53 +12,85 @@ export function ProjectsPage(): React.JSX.Element {
   const { data: projects, isLoading, error } = useProjects()
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
-            Test case management projects on this machine.{' '}
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs font-mono">
-              {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K
-            </kbd>{' '}
-            for command palette.
-          </p>
-        </div>
-        <Button onClick={openNewProject}>
-          <Plus className="mr-2 size-4" /> New project
-        </Button>
-      </header>
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-9 py-8 pb-12">
+        <div className="mx-auto max-w-[920px]">
+          {/* Header */}
+          <header className="flex items-end gap-4 mb-7">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[28px] font-semibold tracking-[-0.02em] leading-[1.15] mb-1.5">
+                Projects
+              </h1>
+              <div className="flex items-center gap-1.5 text-[13px] text-[var(--fg-muted)]">
+                <span>Open one to browse cases, plans, and cycles.</span>
+                <span className="text-[var(--fg-faint)]" aria-hidden="true">
+                  ·
+                </span>
+                <span>
+                  Press{' '}
+                  <kbd className="kbd">
+                    {typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+                      ? '⌘K'
+                      : 'Ctrl K'}
+                  </kbd>{' '}
+                  to jump anywhere.
+                </span>
+              </div>
+            </div>
+            <Button onClick={openNewProject} className="shrink-0">
+              <Sparkles className="size-[13px]" />
+              New project
+            </Button>
+          </header>
 
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load projects: {error.message}
-        </div>
-      )}
+          {/* Error banner */}
+          {error && (
+            <div className="mb-5 rounded-[var(--radius-md)] border border-[var(--fail)]/30 bg-[var(--fail-soft)] px-4 py-3 text-[13px] text-[var(--fail)]">
+              Failed to load projects: {error.message}
+            </div>
+          )}
 
-      {isLoading && (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-md bg-muted" />
-          ))}
-        </div>
-      )}
+          {/* Loading skeletons */}
+          {isLoading && (
+            <div
+              className="flex flex-col gap-px rounded-[var(--radius-lg)] border border-border overflow-hidden"
+              style={{ background: 'hsl(var(--border))' }}
+              aria-label="Loading projects"
+              aria-busy="true"
+            >
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-[68px] animate-pulse bg-[var(--surface-2)]"
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+          )}
 
-      {!isLoading && !error && projects && projects.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
-          <FolderOpen className="size-10 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">No projects yet</h2>
-          <p className="text-sm text-muted-foreground">
-            Create your first project to start managing test cases.
-          </p>
-          <Button onClick={openNewProject}>
-            <Plus className="mr-2 size-4" /> New project
-          </Button>
-        </div>
-      )}
+          {/* Empty state */}
+          {!isLoading && !error && projects && projects.length === 0 && (
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] bg-white/[0.012] dark:bg-white/[0.012] py-14 px-6 text-center text-[var(--fg-muted)]">
+              <div className="size-10 rounded-[10px] bg-[var(--accent-soft)] text-[var(--accent-hover)] grid place-items-center mx-auto mb-3.5">
+                <Layers className="size-[18px]" />
+              </div>
+              <h4 className="text-[15px] font-semibold text-foreground mb-1">No projects yet</h4>
+              <p className="text-[13px] mb-4">
+                Create one to start tracking test cases and execution cycles.
+              </p>
+              <Button onClick={openNewProject}>
+                <Sparkles className="size-[13px]" />
+                Create your first project
+              </Button>
+            </div>
+          )}
 
-      {!isLoading && !error && projects && projects.length > 0 && (
-        <ProjectsList projects={projects} />
-      )}
+          {/* Projects list */}
+          {!isLoading && !error && projects && projects.length > 0 && (
+            <ProjectsList projects={projects} />
+          )}
+        </div>
+      </div>
 
       <NewProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>

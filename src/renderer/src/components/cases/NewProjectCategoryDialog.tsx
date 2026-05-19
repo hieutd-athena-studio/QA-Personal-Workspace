@@ -1,15 +1,12 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Button } from '@renderer/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from '@renderer/components/ui/dialog'
-import { Input } from '@renderer/components/ui/input'
-import { Label } from '@renderer/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -64,39 +61,83 @@ export function NewProjectCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New category</DialogTitle>
+      <DialogContent className="w-[520px] max-w-[calc(100%-3rem)] overflow-hidden rounded-[var(--radius-lg)] border-[var(--border-strong)] bg-[var(--surface-2)] p-0 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.55)] anim-dialog-in">
+        {/* Header */}
+        <DialogHeader className="px-[22px] pb-1 pt-[18px]">
+          <DialogTitle className="text-[16px] font-semibold tracking-[-0.005em] text-foreground">
+            New category
+          </DialogTitle>
+          <DialogDescription className="text-[12.5px] text-[var(--fg-muted)]">
+            Categories group test cases. A top-level category can have subcategories.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cat-name">Name</Label>
-            <Input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+
+        <form onSubmit={submit}>
+          {/* Body */}
+          <div className="space-y-3.5 px-[22px] py-4">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="cat-name"
+                className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--fg-subtle)]"
+              >
+                Name
+              </label>
+              <input
+                id="cat-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Checkout Flow"
+                autoFocus
+                className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2.5 text-[13.5px] text-foreground outline-none placeholder:text-[var(--fg-faint)] transition-colors hover:border-[var(--border-strong)] focus:border-[var(--accent-ring)] focus:bg-[var(--surface-2)]"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="cat-parent"
+                className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--fg-subtle)]"
+              >
+                Parent category
+              </label>
+              <Select value={parentId} onValueChange={setParentId}>
+                <SelectTrigger
+                  id="cat-parent"
+                  className="h-8 rounded-[var(--radius-md)] border-[var(--border)] bg-[var(--surface-1)] text-[13.5px]"
+                >
+                  <SelectValue placeholder="Top-level category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ROOT}>Top-level category</SelectItem>
+                  {topCats.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} (as subcategory)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[11px] text-[var(--fg-faint)]">
+                Leave as top-level to create a parent category.
+              </span>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="cat-parent">Parent (optional)</Label>
-            <Select value={parentId} onValueChange={setParentId}>
-              <SelectTrigger id="cat-parent">
-                <SelectValue placeholder="Top-level category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ROOT}>Top-level category</SelectItem>
-                {topCats.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} (as subcategory)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-[22px] py-3.5">
+            <button
+              type="button"
+              className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[13px] font-medium text-foreground transition-[background,border-color] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)]"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
-            </Button>
-            <Button type="submit" disabled={create.isPending || !name.trim()}>
+            </button>
+            <button
+              type="submit"
+              disabled={create.isPending || !name.trim()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            >
               {create.isPending ? 'Creating…' : 'Create category'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -3,6 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* shadcn semantic tokens (hsl-wrapped) */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -23,12 +24,59 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* surface tokens (raw, used directly) */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  /* foreground tones */
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-faint: var(--fg-faint);
+
+  /* border tones */
+  --color-border-strong: var(--border-strong);
+  --color-border-soft: var(--border-soft);
+
+  /* status — Pass / Fail / Blocked / Unexec only */
+  --color-pass: var(--pass);
+  --color-pass-soft: var(--pass-soft);
+  --color-pass-flash: var(--pass-flash);
+  --color-fail: var(--fail);
+  --color-fail-soft: var(--fail-soft);
+  --color-fail-flash: var(--fail-flash);
+  --color-blocked: var(--blocked);
+  --color-blocked-soft: var(--blocked-soft);
+  --color-blocked-flash: var(--blocked-flash);
+  --color-unexec: var(--unexec);
+  --color-unexec-soft: var(--unexec-soft);
+
+  /* environment tints */
+  --color-env-prod: var(--env-prod);
+  --color-env-stage: var(--env-stage);
+  --color-env-dev: var(--env-dev);
+  --color-env-local: var(--env-local);
+
+  /* accent helpers (derived from --primary at runtime via accent binder) */
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-ring: var(--accent-ring);
+  --color-accent-hover: var(--accent-hover);
+
+  /* radius — tightened per brief */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-out-back: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ─── Light mode (shadcn defaults preserved) ──────────────────── */
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -36,8 +84,8 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
@@ -48,50 +96,466 @@
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --ring: 262 83% 58%;
   --radius: 0.5rem;
+
+  /* design tokens — light defaults (kept readable, brief targets dark) */
+  --surface-1: rgba(0, 0, 0, 0.025);
+  --surface-2: rgba(0, 0, 0, 0.04);
+  --surface-3: rgba(0, 0, 0, 0.06);
+  --overlay: rgba(0, 0, 0, 0.5);
+
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --border-soft: rgba(0, 0, 0, 0.04);
+
+  --fg-muted: rgba(0, 0, 0, 0.62);
+  --fg-subtle: rgba(0, 0, 0, 0.42);
+  --fg-faint: rgba(0, 0, 0, 0.22);
+
+  --accent-hover: #a78bfa;
+  --accent-soft: rgba(139, 92, 246, 0.12);
+  --accent-tint: rgba(139, 92, 246, 0.08);
+  --accent-ring: rgba(139, 92, 246, 0.55);
+
+  --pass: #10b981;
+  --pass-soft: rgba(16, 185, 129, 0.14);
+  --pass-flash: rgba(16, 185, 129, 0.18);
+  --fail: #ef4444;
+  --fail-soft: rgba(239, 68, 68, 0.14);
+  --fail-flash: rgba(239, 68, 68, 0.18);
+  --blocked: #f59e0b;
+  --blocked-soft: rgba(245, 158, 11, 0.16);
+  --blocked-flash: rgba(245, 158, 11, 0.18);
+  --unexec: rgba(0, 0, 0, 0.32);
+  --unexec-soft: rgba(0, 0, 0, 0.05);
+
+  --env-prod: rgba(239, 68, 68, 0.12);
+  --env-stage: rgba(245, 158, 11, 0.12);
+  --env-dev: rgba(59, 130, 246, 0.12);
+  --env-local: rgba(0, 0, 0, 0.04);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI',
+    'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
 }
 
+/* ─── Dark mode ───────────────────────────────────────────────── */
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --background: 240 10% 4.5%; /* #0b0b0e */
+  --foreground: 240 11% 96%;
+  --card: 240 11% 7%; /* #16161b */
+  --card-foreground: 240 11% 96%;
+  --popover: 240 11% 7%;
+  --popover-foreground: 240 11% 96%;
+  --primary: 262 83% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 10% 11%;
+  --secondary-foreground: 240 11% 96%;
+  --muted: 240 10% 9%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 240 10% 11%;
+  --accent-foreground: 240 11% 96%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --border: 240 6% 17%;
+  --input: 240 6% 17%;
+  --ring: 262 83% 65%;
+
+  --surface-1: #111115;
+  --surface-2: #16161b;
+  --surface-3: #1c1c22;
+  --overlay: rgba(11, 11, 14, 0.72);
+
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-soft: rgba(255, 255, 255, 0.04);
+
+  --fg-muted: rgba(244, 244, 246, 0.62);
+  --fg-subtle: rgba(244, 244, 246, 0.42);
+  --fg-faint: rgba(244, 244, 246, 0.22);
+
+  --accent-hover: #a78bfa;
+  --accent-soft: rgba(139, 92, 246, 0.14);
+  --accent-tint: rgba(139, 92, 246, 0.08);
+  --accent-ring: rgba(139, 92, 246, 0.55);
+
+  --pass: #10b981;
+  --pass-soft: rgba(16, 185, 129, 0.14);
+  --pass-flash: rgba(16, 185, 129, 0.18);
+  --fail: #ef4444;
+  --fail-soft: rgba(239, 68, 68, 0.14);
+  --fail-flash: rgba(239, 68, 68, 0.18);
+  --blocked: #f59e0b;
+  --blocked-soft: rgba(245, 158, 11, 0.16);
+  --blocked-flash: rgba(245, 158, 11, 0.18);
+  --unexec: rgba(255, 255, 255, 0.28);
+  --unexec-soft: rgba(255, 255, 255, 0.06);
+
+  --env-prod: rgba(239, 68, 68, 0.12);
+  --env-stage: rgba(245, 158, 11, 0.12);
+  --env-dev: rgba(59, 130, 246, 0.12);
+  --env-local: rgba(255, 255, 255, 0.06);
 }
 
+/* ─── Base layer ──────────────────────────────────────────────── */
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
   }
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      sans-serif;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     user-select: none;
   }
   #root {
     min-height: 100vh;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: hsl(var(--foreground));
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+/* ─── Scrollbar utility ───────────────────────────────────────── */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-faint);
+  background-clip: content-box;
+}
+
+/* ─── Shared utility classes (mirror design system) ──────────── */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--fg-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid hsl(var(--border));
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  padding: 3px 5px;
+  letter-spacing: 0.02em;
+  min-width: 18px;
+  text-align: center;
+}
+.kbd.dim {
+  opacity: 0.55;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'ss01', 'cv11';
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* ─── Keyframes — motion catalogue ────────────────────────────── */
+@keyframes savedFade {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes statusFlash {
+  0% {
+    background-color: var(--flash, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes dotPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--flash, transparent);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 4px var(--flash, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes outlinePulse {
+  0% {
+    box-shadow:
+      inset 3px 0 0 0 var(--primary, hsl(var(--ring))),
+      inset 0 0 0 1px var(--accent-ring);
+  }
+  100% {
+    box-shadow:
+      inset 3px 0 0 0 var(--primary, hsl(var(--ring))),
+      inset 0 0 0 1px transparent;
+  }
+}
+
+@keyframes paletteFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes selbarIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes paneFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes caseFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stepEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes savingPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulseLine {
+  0%,
+  100% {
+    transform: scaleX(0.2);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Animation utility classes ───────────────────────────────── */
+.anim-row-enter {
+  animation: rowEnter var(--duration-base) var(--ease-out-back) backwards;
+}
+.anim-pane-fade {
+  animation: paneFade var(--duration-base) var(--ease-out-back);
+}
+.anim-case-fade {
+  animation: caseFade var(--duration-base) var(--ease-out-back);
+}
+.anim-step-enter {
+  animation: stepEnter var(--duration-base) var(--ease-out-back);
+}
+.anim-dialog-in {
+  animation: dialogIn 180ms var(--ease-out-back);
+}
+.anim-dialog-overlay {
+  animation: dialogFadeIn 180ms var(--ease-out-back);
+}
+.anim-palette-in {
+  animation: paletteIn 140ms var(--ease-out-back);
+}
+.anim-palette-overlay {
+  animation: paletteFadeIn 120ms var(--ease-out-back);
+}
+.anim-toast-in {
+  animation: toastIn var(--duration-base) var(--ease-out-back);
+}
+.anim-pop-in {
+  animation: popIn 140ms var(--ease-out-back);
+}
+.anim-selbar-in {
+  animation: selbarIn var(--duration-base) var(--ease-out-back);
+}
+.anim-saved-fade {
+  animation: savedFade 2.4s var(--ease-out-back);
+}
+.anim-dot-pulse {
+  animation: dotPulse 280ms var(--ease-out-back);
+}
+.anim-outline-pulse {
+  animation: outlinePulse 500ms var(--ease-out-back);
+}
+.anim-saving-pulse {
+  animation: savingPulse 700ms infinite var(--ease-out-back);
+}
+.anim-pulse-line {
+  animation: pulseLine 800ms infinite var(--ease-out-back);
+}
+.anim-spin {
+  animation: spin 700ms linear infinite;
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
   }
 }

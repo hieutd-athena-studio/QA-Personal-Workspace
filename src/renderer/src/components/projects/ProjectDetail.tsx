@@ -1,7 +1,21 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ChevronLeft, Download, Upload } from 'lucide-react'
+import {
+  ChevronLeft,
+  Download,
+  FileSpreadsheet,
+  MoreHorizontal,
+  Trash2,
+  Upload
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@renderer/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@renderer/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { DashboardPane } from './DashboardPane'
 import { CasesPane } from '../cases/CasesPane'
@@ -9,6 +23,9 @@ import { PlansPane } from '../plans/PlansPane'
 import { TypesPane } from '../types/TypesPane'
 import { ReportsPane } from '../reports/ReportsPane'
 import { useExportBackup, useImportBackup } from '@renderer/hooks/useBackup'
+import { useTestCases } from '@renderer/hooks/useTestCases'
+import { useTestPlans } from '@renderer/hooks/useTestPlans'
+import { useTestTypes } from '@renderer/hooks/useTestTypes'
 import type { Project } from '@shared/types/projects'
 
 interface Props {
@@ -16,91 +33,238 @@ interface Props {
   defaultTab?: string
 }
 
+const TAB_KEYS = ['dashboard', 'cases', 'plans', 'types', 'reports'] as const
+type TabKey = (typeof TAB_KEYS)[number]
+
+// Sliding underline tab bar — uses measured-rect approach (no Framer Motion needed)
+function SlidingTabBar({
+  tabs,
+  value,
+  onChange
+}: {
+  tabs: { key: TabKey; label: string; badge?: number }[]
+  value: TabKey
+  onChange: (k: TabKey) => void
+}): React.JSX.Element {
+  const barRef = useRef<HTMLDivElement>(null)
+  const [ind, setInd] = useState({ left: 0, width: 0 })
+
+  const measure = (): void => {
+    const btn = barRef.current?.querySelector<HTMLElement>(`[data-tabkey="${value}"]`)
+    if (!btn || !barRef.current) return
+    const parent = barRef.current.getBoundingClientRect()
+    const r = btn.getBoundingClientRect()
+    setInd({ left: r.left - parent.left, width: r.width })
+  }
+
+  useLayoutEffect(() => {
+    measure()
+  }, [value, tabs.length])
+
+  // resize observer
+  useLayoutEffect(() => {
+    const el = barRef.current
+    if (!el) return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [value])
+
+  return (
+    <div
+      ref={barRef}
+      role="tablist"
+      className="relative flex gap-0 border-b border-[var(--border)] px-8 flex-shrink-0"
+      style={{ marginTop: 22 }}
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          data-tabkey={t.key}
+          role="tab"
+          aria-selected={value === t.key}
+          onClick={() => onChange(t.key)}
+          className={[
+            'relative inline-flex h-[38px] cursor-pointer items-center gap-2 border-0 bg-transparent px-3.5 text-[13px] font-medium transition-colors',
+            value === t.key
+              ? 'font-semibold text-foreground'
+              : 'text-[var(--fg-muted)] hover:text-foreground'
+          ].join(' ')}
+        >
+          {t.label}
+          {t.badge != null && (
+            <span className="rounded-full border border-[var(--border)] bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] font-medium text-[var(--fg-subtle)]">
+              {t.badge}
+            </span>
+          )}
+        </button>
+      ))}
+      {/* Sliding indicator */}
+      <div
+        className="pointer-events-none absolute bottom-[-1px] h-[2px] rounded-[1px] bg-[var(--accent)]"
+        style={{
+          left: ind.left,
+          width: ind.width,
+          transition: 'left 200ms var(--ease-out-back), width 200ms var(--ease-out-back)'
+        }}
+      />
+    </div>
+  )
+}
+
 export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element {
+  const [tab, setTab] = useState<TabKey>((defaultTab as TabKey) ?? 'dashboard')
   const exportBackup = useExportBackup()
   const importBackup = useImportBackup()
 
-  return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
-      <Link
-        to="/"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" /> All projects
-      </Link>
+  // badge counts
+  const { data: cases } = useTestCases(project.id)
+  const { data: plans } = useTestPlans(project.id)
+  const { data: types } = useTestTypes(project.id)
 
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
+  const tabs: { key: TabKey; label: string; badge?: number }[] = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'cases', label: 'Test Cases', badge: cases?.length },
+    { key: 'plans', label: 'Plans & Cycles', badge: plans?.length },
+    { key: 'types', label: 'Test Types', badge: types?.length },
+    { key: 'reports', label: 'Reports' }
+  ]
+
+  return (
+    <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {/* Project header */}
+      <div className="flex-shrink-0 px-8 pt-[22px]">
+        <Link
+          to="/"
+          className="mb-3.5 inline-flex items-center gap-1.5 text-[12px] text-[var(--fg-subtle)] transition-colors hover:text-foreground"
+        >
+          <ChevronLeft className="size-3" />
+          All projects
+        </Link>
+
+        <div className="flex items-start gap-3.5">
+          {/* Color swatch with inset highlight */}
           <span
-            className="mt-1 size-12 shrink-0 rounded-md"
-            style={{ backgroundColor: project.color }}
+            className="mt-0.5 size-9 shrink-0 rounded-[var(--radius-md)]"
+            style={{
+              backgroundColor: project.color,
+              boxShadow:
+                'inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25)'
+            }}
             aria-hidden="true"
           />
-          <div>
-            <h1 className="flex items-baseline gap-3 text-3xl font-bold tracking-tight">
-              <span className="font-mono text-base text-muted-foreground">
-                {project.display_prefix}
-              </span>
+
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-[11.5px] tracking-[0.04em] text-[var(--fg-subtle)]">
+              {project.display_prefix}
+            </div>
+            <h1 className="mt-0.5 mb-1 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-foreground">
               {project.name}
             </h1>
             {project.description && (
-              <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
+              <p className="text-[13px] text-[var(--fg-muted)] max-w-[72ch] mt-0.5">
+                {project.description}
+              </p>
             )}
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              exportBackup.mutate(undefined, {
-                onSuccess: (r) => {
-                  if (!r.canceled) toast.success(`Backup saved to ${r.path}`)
-                },
-                onError: (e) => toast.error(e.message)
-              })
-            }
-          >
-            <Download className="mr-2 size-4" /> Backup
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              importBackup.mutate(undefined, {
-                onSuccess: (r) => {
-                  if (!r.canceled) toast.success('Workspace restored from backup')
-                },
-                onError: (e) => toast.error(e.message)
-              })
-            }
-          >
-            <Upload className="mr-2 size-4" /> Restore
-          </Button>
-        </div>
-      </header>
 
-      <Tabs defaultValue={defaultTab ?? 'dashboard'}>
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="cases">Test Cases</TabsTrigger>
-          <TabsTrigger value="plans">Plans &amp; Cycles</TabsTrigger>
-          <TabsTrigger value="types">Test Types</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          {/* ••• dropdown */}
+          <div className="ml-auto flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-transparent bg-transparent text-[var(--fg-muted)] transition-colors hover:bg-white/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                aria-label="More project options"
+              >
+                <MoreHorizontal className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[220px]">
+                <DropdownMenuItem
+                  onSelect={() =>
+                    exportBackup.mutate(undefined, {
+                      onSuccess: (r) => {
+                        if (!r.canceled) toast.success(`Backup saved to ${r.path}`)
+                      },
+                      onError: (e) => toast.error(e.message)
+                    })
+                  }
+                >
+                  <Download className="mr-2 size-4" />
+                  Backup project…
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    importBackup.mutate(undefined, {
+                      onSuccess: (r) => {
+                        if (!r.canceled) toast.success('Workspace restored from backup')
+                      },
+                      onError: (e) => toast.error(e.message)
+                    })
+                  }
+                >
+                  <Upload className="mr-2 size-4" />
+                  Restore from backup…
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <FileSpreadsheet className="mr-2 size-4" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 size-4" />
+                  Delete project…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom sliding tab bar */}
+      <SlidingTabBar tabs={tabs} value={tab} onChange={setTab} />
+
+      {/* Tab content — using shadcn Tabs underneath for a11y but the visual tabs are above */}
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as TabKey)}
+        className="flex flex-1 min-h-0 flex-col"
+      >
+        {/* Hidden TabsList keeps Radix a11y happy */}
+        <TabsList className="sr-only">
+          {TAB_KEYS.map((k) => (
+            <TabsTrigger key={k} value={k}>
+              {k}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="dashboard" className="mt-6">
+
+        <TabsContent
+          value="dashboard"
+          className="anim-pane-fade flex-1 min-h-0 overflow-y-auto px-8 py-6 pb-8 scrollbar-thin"
+        >
           <DashboardPane project={project} />
         </TabsContent>
-        <TabsContent value="cases" className="mt-6">
+        <TabsContent
+          value="cases"
+          className="anim-pane-fade relative flex-1 min-h-0 overflow-y-auto px-8 py-6 pb-8 scrollbar-thin"
+        >
           <CasesPane projectId={project.id} />
         </TabsContent>
-        <TabsContent value="plans" className="mt-6">
+        <TabsContent
+          value="plans"
+          className="anim-pane-fade flex-1 min-h-0 overflow-y-auto px-8 py-6 pb-8 scrollbar-thin"
+        >
           <PlansPane projectId={project.id} />
         </TabsContent>
-        <TabsContent value="types" className="mt-6">
+        <TabsContent
+          value="types"
+          className="anim-pane-fade flex-1 min-h-0 overflow-y-auto px-8 py-6 pb-8 scrollbar-thin"
+        >
           <TypesPane projectId={project.id} />
         </TabsContent>
-        <TabsContent value="reports" className="mt-6">
+        <TabsContent
+          value="reports"
+          className="anim-pane-fade flex-1 min-h-0 overflow-y-auto px-8 py-6 pb-8 scrollbar-thin"
+        >
           <ReportsPane projectId={project.id} />
         </TabsContent>
       </Tabs>

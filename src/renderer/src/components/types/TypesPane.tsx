@@ -1,12 +1,21 @@
 import { useState } from 'react'
-import { Plus, Trash2, Users } from 'lucide-react'
+import { Plus, Sparkles, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@renderer/components/ui/button'
-import { Card, CardContent } from '@renderer/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@renderer/components/ui/alert-dialog'
 import { useDeleteTestType, useTestTypeCounts, useTestTypes } from '@renderer/hooks/useTestTypes'
 import { useTestCases } from '@renderer/hooks/useTestCases'
 import { NewTestTypeDialog } from './NewTestTypeDialog'
 import { ManageTypeCasesDialog } from './ManageTypeCasesDialog'
+import type { TestType } from '@shared/types/test_types'
 
 interface Props {
   projectId: string
@@ -19,65 +28,87 @@ export function TypesPane({ projectId }: Props): React.JSX.Element {
   const del = useDeleteTestType(projectId)
   const [newOpen, setNewOpen] = useState(false)
   const [manageId, setManageId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const total = cases?.length ?? 0
+  const confirmType = (types ?? []).find((t) => t.id === confirmId)
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setNewOpen(true)}>
-          <Plus className="mr-2 size-4" /> New type
-        </Button>
+      {/* Header */}
+      <div className="flex items-center">
+        <span className="eyebrow">Test types · {(types ?? []).length}</span>
+        <span className="flex-1" />
+        <button
+          className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+          onClick={() => setNewOpen(true)}
+        >
+          <Sparkles className="size-[13px]" />
+          New type
+        </button>
       </div>
 
       {(types ?? []).length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <Users className="size-8 text-muted-foreground" />
-            <p className="text-sm">No test types yet.</p>
-            <Button size="sm" onClick={() => setNewOpen(true)}>
-              <Plus className="mr-2 size-4" /> New type
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] px-6 py-12 text-center text-[var(--fg-muted)]">
+          <div className="mb-3 flex justify-center">
+            <Users className="size-5 text-[var(--fg-faint)]" />
+          </div>
+          <h4 className="mb-1 text-[14px] font-semibold text-foreground">No test types yet</h4>
+          <p className="mb-4 text-[13px]">
+            Test types group cases orthogonally — Smoke, Regression, API…
+          </p>
+          <button
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+            onClick={() => setNewOpen(true)}
+          >
+            <Plus className="size-3.5" />
+            New type
+          </button>
+        </div>
       ) : (
-        <ul className="space-y-3">
+        <div className="space-y-2.5">
           {(types ?? []).map((t) => (
-            <li key={t.id}>
-              <Card>
-                <CardContent className="flex items-center gap-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{t.name}</p>
-                    {t.description && (
-                      <p className="truncate text-xs text-muted-foreground">{t.description}</p>
-                    )}
-                  </div>
-                  <span className="text-sm tabular-nums text-muted-foreground">
-                    {counts?.[t.id] ?? 0} / {total}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => setManageId(t.id)}>
-                    Manage cases
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (!confirm(`Delete test type "${t.name}"?`)) return
-                      del.mutate(t.id, {
-                        onSuccess: () => toast.success('Deleted'),
-                        onError: (e) => toast.error(e.message)
-                      })
-                    }}
-                    aria-label={`Delete ${t.name}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </li>
+            <TypeRow
+              key={t.id}
+              type={t}
+              assigned={counts?.[t.id] ?? 0}
+              total={total}
+              onManage={() => setManageId(t.id)}
+              onDelete={() => setConfirmId(t.id)}
+            />
           ))}
-        </ul>
+        </div>
       )}
+
+      {/* Confirm delete */}
+      <AlertDialog open={Boolean(confirmId)} onOpenChange={(o) => !o && setConfirmId(null)}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete type &quot;{confirmType?.name}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Case assignments to this type will also be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (!confirmId) return
+                del.mutate(confirmId, {
+                  onSuccess: () => {
+                    toast.success('Deleted')
+                    setConfirmId(null)
+                  },
+                  onError: (e) => toast.error(e.message)
+                })
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <NewTestTypeDialog projectId={projectId} open={newOpen} onOpenChange={setNewOpen} />
       {manageId && (
@@ -88,6 +119,75 @@ export function TypesPane({ projectId }: Props): React.JSX.Element {
           onOpenChange={(o) => !o && setManageId(null)}
         />
       )}
+    </div>
+  )
+}
+
+function TypeRow({
+  type,
+  assigned,
+  total,
+  onManage,
+  onDelete
+}: {
+  type: TestType
+  assigned: number
+  total: number
+  onManage: () => void
+  onDelete: () => void
+}): React.JSX.Element {
+  const pct = total === 0 ? 0 : (assigned / total) * 100
+
+  return (
+    <div
+      className="grid items-center gap-[18px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5"
+      style={{ gridTemplateColumns: '1fr 220px auto' }}
+    >
+      {/* Name + description */}
+      <div className="min-w-0">
+        <p className="truncate text-[14px] font-medium text-foreground">{type.name}</p>
+        {type.description && (
+          <p className="mt-0.5 truncate text-[12.5px] text-[var(--fg-muted)]">{type.description}</p>
+        )}
+      </div>
+
+      {/* Progress bar + count */}
+      <div className="flex items-center gap-2.5">
+        <div
+          className="h-1.5 flex-1 overflow-hidden rounded-full"
+          style={{ background: 'rgba(255,255,255,0.05)' }}
+          role="progressbar"
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${assigned} of ${total} cases assigned`}
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-[320ms]"
+            style={{ width: `${pct}%`, background: 'var(--accent)' }}
+          />
+        </div>
+        <span className="whitespace-nowrap font-mono text-[11.5px] text-[var(--fg-muted)]">
+          {assigned}/{total}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1.5">
+        <button
+          className="inline-flex h-8 items-center gap-1 rounded-[var(--radius-md)] border border-transparent bg-transparent px-3 text-[13px] font-medium text-[var(--fg-muted)] transition-[background,color] hover:bg-white/[0.04] hover:text-foreground"
+          onClick={onManage}
+        >
+          Manage cases
+        </button>
+        <button
+          className="grid size-7 place-items-center rounded-[var(--radius-md)] text-[var(--fg-subtle)] transition-[background,color] hover:bg-[var(--fail-soft)] hover:text-[#fca5a5]"
+          onClick={onDelete}
+          aria-label={`Delete ${type.name}`}
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
     </div>
   )
 }

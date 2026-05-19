@@ -1,11 +1,20 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { CalendarDays, Plus } from 'lucide-react'
+import { CalendarDays, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@renderer/components/ui/button'
-import { Card, CardContent } from '@renderer/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@renderer/components/ui/alert-dialog'
 import { useDeleteTestPlan, useTestPlans } from '@renderer/hooks/useTestPlans'
 import { useTestCyclesForProject } from '@renderer/hooks/useTestCycles'
-import { Trash2 } from 'lucide-react'
+import type { TestPlan } from '@shared/types/test_plans'
 
 interface Props {
   projectId: string
@@ -15,6 +24,8 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
   const { data: plans } = useTestPlans(projectId)
   const { data: allCycles } = useTestCyclesForProject(projectId)
   const deletePlan = useDeleteTestPlan(projectId)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const confirmPlan = (plans ?? []).find((p) => p.id === confirmId)
 
   const cyclesByPlan = new Map<string, number>()
   for (const c of allCycles ?? []) {
@@ -23,73 +34,155 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button size="sm" asChild>
-          <Link to="/projects/$projectId/plans/new" params={{ projectId }}>
-            <Plus className="mr-2 size-4" /> New plan
-          </Link>
-        </Button>
+      {/* Header row */}
+      <div className="flex items-center">
+        <span className="eyebrow">All plans · {(plans ?? []).length}</span>
+        <span className="flex-1" />
+        <Link
+          to="/projects/$projectId/plans/new"
+          params={{ projectId }}
+          className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+        >
+          <Sparkles className="size-[13px]" />
+          New plan
+        </Link>
       </div>
 
       {(plans ?? []).length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <CalendarDays className="size-8 text-muted-foreground" />
-            <p className="text-sm">No test plans yet.</p>
-            <Button size="sm" asChild>
-              <Link to="/projects/$projectId/plans/new" params={{ projectId }}>
-                <Plus className="mr-2 size-4" /> New plan
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] px-6 py-12 text-center text-[var(--fg-muted)]">
+          <div className="mb-3 flex justify-center">
+            <CalendarDays className="size-5 text-[var(--fg-faint)]" />
+          </div>
+          <h4 className="mb-1 text-[14px] font-semibold text-foreground">No test plans yet</h4>
+          <p className="mb-4 text-[13px]">Create your first test plan to get started.</p>
+          <Link
+            to="/projects/$projectId/plans/new"
+            params={{ projectId }}
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+          >
+            <Plus className="size-3.5" />
+            New plan
+          </Link>
+        </div>
       ) : (
-        <ul className="space-y-3">
+        <div className="space-y-2.5">
           {(plans ?? []).map((plan) => (
-            <li key={plan.id}>
-              <Card>
-                <CardContent className="flex items-center gap-4 py-4">
-                  <Link
-                    to="/projects/$projectId/plans/$planId"
-                    params={{ projectId, planId: plan.id }}
-                    className="min-w-0 flex-1"
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {plan.display_id}
-                      </span>
-                      <span className="truncate font-medium">{plan.name}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {plan.start_date && plan.end_date
-                        ? `${plan.start_date} → ${plan.end_date}`
-                        : 'No dates set'}
-                      {plan.working_days !== null && ` · ${plan.working_days} working days`}
-                      {' · '}
-                      {cyclesByPlan.get(plan.id) ?? 0} cycle
-                      {(cyclesByPlan.get(plan.id) ?? 0) === 1 ? '' : 's'}
-                    </p>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (!confirm(`Delete plan "${plan.name}"?`)) return
-                      deletePlan.mutate(plan.id, {
-                        onSuccess: () => toast.success('Deleted'),
-                        onError: (e) => toast.error(e.message)
-                      })
-                    }}
-                    aria-label={`Delete ${plan.name}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </li>
+            <PlanRow
+              key={plan.id}
+              plan={plan}
+              projectId={projectId}
+              cycleCount={cyclesByPlan.get(plan.id) ?? 0}
+              onDelete={() => setConfirmId(plan.id)}
+            />
           ))}
-        </ul>
+        </div>
       )}
+
+      {/* Confirm delete */}
+      <AlertDialog open={Boolean(confirmId)} onOpenChange={(o) => !o && setConfirmId(null)}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete plan &quot;{confirmPlan?.name}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will also delete all cycles and assignments. Cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (!confirmId) return
+                deletePlan.mutate(confirmId, {
+                  onSuccess: () => {
+                    toast.success('Deleted')
+                    setConfirmId(null)
+                  },
+                  onError: (e) => toast.error(e.message)
+                })
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+function PlanRow({
+  plan,
+  projectId,
+  cycleCount,
+  onDelete
+}: {
+  plan: TestPlan
+  projectId: string
+  cycleCount: number
+  onDelete: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      className="grid items-center gap-[18px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5"
+      style={{ gridTemplateColumns: 'auto 1fr auto' }}
+    >
+      {/* ID pill */}
+      <div>
+        <span className="rounded border border-[var(--border)] bg-white/[0.03] px-2 py-px font-mono text-[11.5px] text-[var(--fg-subtle)]">
+          {plan.display_id}
+        </span>
+      </div>
+
+      {/* Name + meta */}
+      <div className="min-w-0">
+        <p className="mb-1 text-[14px] font-medium text-foreground">{plan.name}</p>
+        {plan.description && (
+          <p className="mb-1 text-[12.5px] text-[var(--fg-muted)]">{plan.description}</p>
+        )}
+        <div className="flex flex-wrap gap-3.5 text-[11.5px] text-[var(--fg-subtle)]">
+          {plan.start_date && plan.end_date && (
+            <span>
+              {plan.start_date} → {plan.end_date}
+            </span>
+          )}
+          {plan.working_days != null && <span>{plan.working_days} working days</span>}
+          <span>
+            {cycleCount} cycle{cycleCount === 1 ? '' : 's'}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress + actions */}
+      <div className="min-w-[200px]">
+        {/* Mini progress bar (blank unless we have progress data — placeholder for now) */}
+        <div className="mb-2.5 flex items-center gap-2">
+          <div
+            className="flex h-1.5 flex-1 overflow-hidden rounded-full"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+          >
+            {/* TODO: wire to useQueries per cycle for actual P/F/B/U progress */}
+          </div>
+          <span className="font-mono text-[11px] text-[var(--fg-muted)]">0 / 0</span>
+        </div>
+
+        <div className="flex items-center justify-end gap-1.5">
+          <Link
+            to="/projects/$projectId/plans/$planId"
+            params={{ projectId, planId: plan.id }}
+            className="inline-flex h-8 items-center gap-1 rounded-[var(--radius-md)] border border-transparent bg-transparent px-3 text-[13px] font-medium text-[var(--fg-muted)] transition-[background,color] hover:bg-white/[0.04] hover:text-foreground"
+          >
+            Open
+          </Link>
+          <button
+            className="grid size-7 place-items-center rounded-[var(--radius-md)] text-[var(--fg-subtle)] transition-[background,color] hover:bg-[var(--fail-soft)] hover:text-[#fca5a5]"
+            onClick={onDelete}
+            aria-label={`Delete ${plan.name}`}
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -39,16 +39,37 @@ export function useAccentEffect(): void {
 
   useEffect(() => {
     const root = document.documentElement
+
     if (!activeId || !projects) {
-      root.style.removeProperty('--accent')
-      root.style.removeProperty('--accent-foreground')
+      root.style.removeProperty('--primary')
+      root.style.removeProperty('--ring')
+      root.style.removeProperty('--accent-hover')
+      root.style.removeProperty('--accent-soft')
+      root.style.removeProperty('--accent-tint')
+      root.style.removeProperty('--accent-ring')
       return
     }
+
     const active = projects.find((p) => p.id === activeId)
     if (!active) return
+
+    // Parse hex to r/g/b integers for rgba derivations
+    const m = /^#([0-9a-f]{6})$/i.exec(active.color)
+    if (!m) return
+    const n = parseInt(m[1]!, 16)
+    const ri = (n >> 16) & 255
+    const gi = (n >> 8) & 255
+    const bi = n & 255
+
     const hsl = hexToHsl(active.color)
     if (!hsl) return
-    root.style.setProperty('--accent', hsl)
-    root.style.setProperty('--accent-foreground', '0 0% 100%')
+
+    // Write project-derived design tokens
+    root.style.setProperty('--primary', hsl)
+    root.style.setProperty('--ring', hsl)
+    root.style.setProperty('--accent-hover', active.color)
+    root.style.setProperty('--accent-soft', `rgba(${ri}, ${gi}, ${bi}, 0.14)`)
+    root.style.setProperty('--accent-tint', `rgba(${ri}, ${gi}, ${bi}, 0.08)`)
+    root.style.setProperty('--accent-ring', `rgba(${ri}, ${gi}, ${bi}, 0.55)`)
   }, [activeId, projects])
 }
