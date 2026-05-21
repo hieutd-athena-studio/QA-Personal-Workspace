@@ -329,6 +329,14 @@ export function ExecutionPage({ cycleId }: Props): React.JSX.Element {
       <aside className="flex flex-col min-h-0 border-r border-[var(--border)] bg-[rgba(255,255,255,0.015)]">
         {/* Head */}
         <div className="shrink-0 border-b border-[var(--border)] px-4 py-3">
+          {/* Back link */}
+          <Link
+            to="/projects/$projectId/plans/$planId"
+            params={{ projectId: plan?.project_id ?? '', planId: cycle.plan_id }}
+            className="mb-2 inline-flex items-center gap-1 text-[11px] text-[var(--fg-subtle)] hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-3" /> Back to plan
+          </Link>
           {/* Cycle name */}
           <div className="text-[13px] font-semibold text-foreground tracking-[-0.005em] mb-1.5 truncate">
             {cycle.name}

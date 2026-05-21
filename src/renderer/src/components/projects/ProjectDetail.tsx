@@ -143,17 +143,23 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
         </Link>
 
         <div className="flex items-start gap-3.5">
-          {/* Logo or color swatch — 36×36 per spec */}
+          {/* Logo wrapped by project color frame — or plain color swatch when no logo */}
           {project.logo ? (
             <span
               className="mt-0.5 grid size-9 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)]"
               style={{
+                backgroundColor: project.color,
+                padding: 3,
                 boxShadow:
                   'inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25)'
               }}
               aria-hidden="true"
             >
-              <img src={project.logo} alt="" className="size-full object-cover" />
+              <img
+                src={project.logo}
+                alt=""
+                className="size-full rounded-[3px] bg-[var(--surface-2)] object-cover"
+              />
             </span>
           ) : (
             <span

@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, X, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTestCycle } from '@renderer/hooks/useTestCycles'
 import { useTestPlan } from '@renderer/hooks/useTestPlans'
 import { useTestCases } from '@renderer/hooks/useTestCases'
+import { useCategories } from '@renderer/hooks/useCategories'
 import { useAssignCases, useAssignments, useBatchUnassign } from '@renderer/hooks/useAssignments'
 import {
   Dialog,
@@ -14,6 +15,8 @@ import {
   DialogDescription,
   DialogFooter
 } from '@renderer/components/ui/dialog'
+import type { Category } from '@shared/types/categories'
+import type { TestCase } from '@shared/types/test_cases'
 
 interface Props {
   projectId: string
@@ -21,6 +24,8 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+type GroupState = 'all' | 'partial' | 'none'
 
 export function ManageAssignmentsDialog({
   projectId,
@@ -30,7 +35,9 @@ export function ManageAssignmentsDialog({
 }: Props): React.JSX.Element {
   const { data: cycle } = useTestCycle(cycleId)
   const { data: plan } = useTestPlan(cycle?.plan_id)
-  const { data: allCases } = useTestCases(plan?.project_id ?? projectId)
+  const effectiveProjectId = plan?.project_id ?? projectId
+  const { data: allCases } = useTestCases(effectiveProjectId)
+  const { data: cats } = useCategories(effectiveProjectId)
   const { data: assigned } = useAssignments(cycleId)
   const assign = useAssignCases(cycleId)
   const unassign = useBatchUnassign(cycleId)
@@ -42,29 +49,95 @@ export function ManageAssignmentsDialog({
     setSelected(new Set((assigned ?? []).map((a) => a.test_case_id)))
   }, [assigned])
 
+  const topCats = useMemo(() => (cats ?? []).filter((c) => !c.parent_category_id), [cats])
+  const subsByParent = useMemo(() => {
+    const m = new Map<string, Category[]>()
+    for (const c of cats ?? []) {
+      if (c.parent_category_id) {
+        const arr = m.get(c.parent_category_id) ?? []
+        arr.push(c)
+        m.set(c.parent_category_id, arr)
+      }
+    }
+    return m
+  }, [cats])
+
+  const casesBySubcat = useMemo(() => {
+    const m = new Map<string, TestCase[]>()
+    const orphans: TestCase[] = []
+    for (const tc of allCases ?? []) {
+      if (tc.subcategory_id) {
+        const arr = m.get(tc.subcategory_id) ?? []
+        arr.push(tc)
+        m.set(tc.subcategory_id, arr)
+      } else {
+        orphans.push(tc)
+      }
+    }
+    return { bySubcat: m, orphans }
+  }, [allCases])
+
   const lc = filter.trim().toLowerCase()
-  const filteredCases = (allCases ?? []).filter(
-    (c) => !lc || c.name.toLowerCase().includes(lc) || c.display_id.toLowerCase().includes(lc)
-  )
+  const matchesFilter = (tc: TestCase): boolean =>
+    !lc || tc.name.toLowerCase().includes(lc) || tc.display_id.toLowerCase().includes(lc)
 
   const toggle = (id: string): void => {
-    const next = new Set(selected)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setSelected(next)
-  }
-
-  const allShownSelected =
-    filteredCases.length > 0 && filteredCases.every((c) => selected.has(c.id))
-
-  const toggleAll = (): void => {
     setSelected((prev) => {
       const next = new Set(prev)
-      if (allShownSelected) filteredCases.forEach((c) => next.delete(c.id))
-      else filteredCases.forEach((c) => next.add(c.id))
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
+
+  const setGroup = (ids: string[], select: boolean): void => {
+    if (ids.length === 0) return
+    setSelected((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) {
+        if (select) next.add(id)
+        else next.delete(id)
+      }
+      return next
+    })
+  }
+
+  const groupState = (ids: string[]): GroupState => {
+    if (ids.length === 0) return 'none'
+    const sel = ids.filter((id) => selected.has(id)).length
+    if (sel === ids.length) return 'all'
+    if (sel > 0) return 'partial'
+    return 'none'
+  }
+
+  const visible = useMemo(() => {
+    type Sub = { sub: Category; tcs: TestCase[] }
+    type Cat = { cat: Category; subs: Sub[]; direct: TestCase[] }
+    const allCats: Cat[] = topCats.map((cat) => {
+      const subs = (subsByParent.get(cat.id) ?? []).map((sub) => ({
+        sub,
+        tcs: (casesBySubcat.bySubcat.get(sub.id) ?? []).filter(matchesFilter)
+      }))
+      const direct = (casesBySubcat.bySubcat.get(cat.id) ?? []).filter(matchesFilter)
+      return { cat, subs, direct }
+    })
+    const orphans = casesBySubcat.orphans.filter(matchesFilter)
+    return { allCats, orphans }
+  }, [topCats, subsByParent, casesBySubcat, lc])
+
+  const allVisibleIds = useMemo(() => {
+    const ids: string[] = []
+    for (const c of visible.allCats) {
+      for (const s of c.subs) for (const tc of s.tcs) ids.push(tc.id)
+      for (const tc of c.direct) ids.push(tc.id)
+    }
+    for (const tc of visible.orphans) ids.push(tc.id)
+    return ids
+  }, [visible])
+
+  const allShownState = groupState(allVisibleIds)
+  const allShownSelected = allShownState === 'all'
+  const hasAnyVisible = allVisibleIds.length > 0
 
   const initialIds = (assigned ?? []).map((a) => a.test_case_id)
   const addedCount = [...selected].filter((id) => !initialIds.includes(id)).length
@@ -97,7 +170,7 @@ export function ManageAssignmentsDialog({
             Manage cases — {cycle?.display_id}
           </DialogTitle>
           <DialogDescription className="text-[12.5px] text-[var(--fg-muted)]">
-            Pick the test cases this cycle covers.{cycle?.name ? ` ${cycle.name}.` : ''}
+            Pick the test cases this cycle covers. Tick a category or subcategory to bulk-select.
           </DialogDescription>
         </DialogHeader>
 
@@ -127,74 +200,100 @@ export function ManageAssignmentsDialog({
 
           {/* Checklist */}
           <div className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-            {/* Checklist header */}
+            {/* Top header w/ select-all */}
             <div className="flex items-center gap-2 px-2.5 py-2 border-b border-[var(--border)] bg-white/[0.02]">
-              <button
-                type="button"
-                onClick={toggleAll}
-                aria-label="Toggle all"
-                className="flex size-3.5 items-center justify-center rounded-[3px] border-[1.2px] transition-colors"
-                style={{
-                  borderColor: allShownSelected ? 'hsl(var(--primary))' : 'var(--border-strong)',
-                  background: allShownSelected ? 'hsl(var(--primary))' : 'var(--surface-1)',
-                  color: 'white'
-                }}
-              >
-                {allShownSelected && <Check className="size-2.5" strokeWidth={2.4} />}
-              </button>
+              <GroupCheckbox
+                state={allShownState}
+                disabled={!hasAnyVisible}
+                onClick={() => setGroup(allVisibleIds, !allShownSelected)}
+                label="Toggle all shown"
+              />
               <span className="text-[12px] text-[var(--fg-muted)]">
                 {allShownSelected ? 'Deselect all' : 'Select all'}
-                {lc && ` (${filteredCases.length} matching)`}
+                {lc && ` (${allVisibleIds.length} matching)`}
               </span>
               <span className="ml-auto font-mono text-[11.5px] text-[var(--fg-muted)]">
                 {selected.size} of {(allCases ?? []).length} selected
               </span>
             </div>
 
-            {/* Case rows */}
-            <div className="max-h-[320px] overflow-y-auto scrollbar-thin">
-              {filteredCases.length === 0 ? (
+            {/* Grouped case list */}
+            <div className="max-h-[360px] overflow-y-auto scrollbar-thin">
+              {!hasAnyVisible ? (
                 <div className="px-4 py-8 text-center text-[12px] text-[var(--fg-subtle)]">
                   No cases match.
                 </div>
               ) : (
-                filteredCases.map((c, idx) => {
-                  const checked = selected.has(c.id)
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => toggle(c.id)}
-                      className={[
-                        'grid items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors',
-                        idx > 0 ? 'border-t border-[var(--border-soft)]' : '',
-                        checked ? 'bg-[var(--accent-tint)]' : 'hover:bg-white/[0.03]'
-                      ].join(' ')}
-                      style={{ gridTemplateColumns: '18px auto 1fr auto' }}
-                    >
-                      {/* Checkbox */}
-                      <span
-                        className="flex size-3.5 items-center justify-center rounded-[3px] border-[1.2px] transition-colors"
-                        style={{
-                          borderColor: checked ? 'hsl(var(--primary))' : 'var(--border-strong)',
-                          background: checked ? 'hsl(var(--primary))' : 'var(--surface-1)',
-                          color: 'white'
-                        }}
+                <>
+                  {visible.allCats.map(({ cat, subs, direct }) => {
+                    const catIds: string[] = []
+                    for (const s of subs) for (const tc of s.tcs) catIds.push(tc.id)
+                    for (const tc of direct) catIds.push(tc.id)
+                    if (catIds.length === 0) return null
+                    return (
+                      <CategoryBlock
+                        key={cat.id}
+                        label={cat.name}
+                        state={groupState(catIds)}
+                        onToggle={() => setGroup(catIds, groupState(catIds) !== 'all')}
+                        count={catIds.length}
                       >
-                        {checked && <Check className="size-2.5" strokeWidth={2.4} />}
-                      </span>
-                      {/* ID */}
-                      <span className="font-mono text-[11.5px] text-[var(--fg-subtle)]">
-                        {c.display_id}
-                      </span>
-                      {/* Name */}
-                      <span className="text-[12.5px] text-foreground truncate">{c.name}</span>
-                      {/* Sub */}
-                      <span className="font-mono text-[10.5px] text-[var(--fg-faint)]">
-                        {/* subcategory label would need join with categories hook — showing display_id for now */}
-                      </span>
-                    </div>
-                  )
-                })
+                        {subs.map(({ sub, tcs }) => {
+                          if (tcs.length === 0) return null
+                          const subIds = tcs.map((tc) => tc.id)
+                          return (
+                            <SubcategoryBlock
+                              key={sub.id}
+                              label={sub.name}
+                              state={groupState(subIds)}
+                              onToggle={() => setGroup(subIds, groupState(subIds) !== 'all')}
+                              count={subIds.length}
+                            >
+                              {tcs.map((tc) => (
+                                <CaseRow
+                                  key={tc.id}
+                                  tc={tc}
+                                  checked={selected.has(tc.id)}
+                                  onToggle={() => toggle(tc.id)}
+                                />
+                              ))}
+                            </SubcategoryBlock>
+                          )
+                        })}
+                        {direct.map((tc) => (
+                          <CaseRow
+                            key={tc.id}
+                            tc={tc}
+                            checked={selected.has(tc.id)}
+                            onToggle={() => toggle(tc.id)}
+                          />
+                        ))}
+                      </CategoryBlock>
+                    )
+                  })}
+                  {visible.orphans.length > 0 &&
+                    (() => {
+                      const ids = visible.orphans.map((tc) => tc.id)
+                      return (
+                        <CategoryBlock
+                          label="Uncategorized"
+                          state={groupState(ids)}
+                          onToggle={() => setGroup(ids, groupState(ids) !== 'all')}
+                          count={ids.length}
+                          muted
+                        >
+                          {visible.orphans.map((tc) => (
+                            <CaseRow
+                              key={tc.id}
+                              tc={tc}
+                              checked={selected.has(tc.id)}
+                              onToggle={() => toggle(tc.id)}
+                            />
+                          ))}
+                        </CategoryBlock>
+                      )
+                    })()}
+                </>
               )}
             </div>
           </div>
@@ -224,5 +323,156 @@ export function ManageAssignmentsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── sub-components ──────────────────────────────────────────────────
+
+function GroupCheckbox({
+  state,
+  disabled = false,
+  onClick,
+  label,
+  compact = false
+}: {
+  state: GroupState
+  disabled?: boolean
+  onClick: () => void
+  label: string
+  compact?: boolean
+}): React.JSX.Element {
+  const size = compact ? 'size-[12px]' : 'size-[14px]'
+  const iconSize = compact ? 'size-[9px]' : 'size-[10px]'
+  return (
+    <button
+      type="button"
+      className={[
+        'grid shrink-0 place-items-center rounded-[3px] border-[1.2px] transition-[background,border-color,opacity] duration-[120ms]',
+        size,
+        disabled
+          ? 'cursor-not-allowed border-[var(--border)] bg-transparent opacity-30'
+          : state === 'all'
+            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+            : state === 'partial'
+              ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+              : 'border-[var(--border-strong)] bg-[var(--surface-1)] hover:border-[var(--fg-subtle)]'
+      ].join(' ')}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (!disabled) onClick()
+      }}
+      aria-label={label}
+      aria-pressed={state === 'all'}
+      disabled={disabled}
+    >
+      {state === 'all' && <Check className={iconSize} strokeWidth={2.4} />}
+      {state === 'partial' && (
+        <span
+          className="block rounded-[1.5px] bg-[var(--accent)]"
+          style={{ width: compact ? 6 : 8, height: 1.5 }}
+          aria-hidden="true"
+        />
+      )}
+    </button>
+  )
+}
+
+function CategoryBlock({
+  label,
+  state,
+  onToggle,
+  count,
+  muted = false,
+  children
+}: {
+  label: string
+  state: GroupState
+  onToggle: () => void
+  count: number
+  muted?: boolean
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="border-t border-[var(--border-soft)] first:border-t-0">
+      <div
+        className={[
+          'flex items-center gap-2 bg-white/[0.015] px-2.5 py-1.5 text-[12px] font-semibold tracking-[-0.005em]',
+          muted ? 'text-[var(--fg-muted)]' : 'text-foreground'
+        ].join(' ')}
+      >
+        <GroupCheckbox state={state} onClick={onToggle} label={`Select all cases in ${label}`} />
+        <span>{label}</span>
+        <span className="font-mono text-[10.5px] font-medium text-[var(--fg-faint)]">{count}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SubcategoryBlock({
+  label,
+  state,
+  onToggle,
+  count,
+  children
+}: {
+  label: string
+  state: GroupState
+  onToggle: () => void
+  count: number
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div>
+      <div className="flex items-center gap-2 border-t border-[var(--border-soft)] bg-white/[0.01] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--fg-subtle)]">
+        <GroupCheckbox
+          state={state}
+          onClick={onToggle}
+          label={`Select all cases in ${label}`}
+          compact
+        />
+        <span>{label}</span>
+        <span className="font-mono text-[10.5px] font-medium normal-case tracking-normal text-[var(--fg-faint)]">
+          {count}
+        </span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function CaseRow({
+  tc,
+  checked,
+  onToggle
+}: {
+  tc: TestCase
+  checked: boolean
+  onToggle: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      className={[
+        'grid cursor-pointer items-center gap-2.5 border-t border-[var(--border-soft)] px-5 py-1.5 transition-colors duration-[120ms]',
+        checked ? 'bg-[var(--accent-tint)]' : 'hover:bg-white/[0.03]'
+      ].join(' ')}
+      style={{ gridTemplateColumns: '18px auto 1fr' }}
+      onClick={onToggle}
+      role="checkbox"
+      aria-checked={checked}
+    >
+      <span
+        className="flex size-[14px] items-center justify-center rounded-[3px] border-[1.2px] transition-colors"
+        style={{
+          borderColor: checked ? 'hsl(var(--primary))' : 'var(--border-strong)',
+          background: checked ? 'hsl(var(--primary))' : 'var(--surface-1)',
+          color: 'white'
+        }}
+      >
+        {checked && <Check className="size-[10px]" strokeWidth={2.4} />}
+      </span>
+      <span className="font-mono text-[11.5px] text-[var(--fg-subtle)]">{tc.display_id}</span>
+      <span className="truncate text-[12.5px] text-foreground">{tc.name}</span>
+    </div>
   )
 }

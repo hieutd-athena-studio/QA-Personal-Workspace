@@ -100,6 +100,38 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
     })
   }
 
+  const setSelectionForIds = (ids: string[], select: boolean): void => {
+    if (ids.length === 0) return
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) {
+        if (select) next.add(id)
+        else next.delete(id)
+      }
+      return next
+    })
+  }
+
+  const collectCategoryCaseIds = (cat: Category): string[] => {
+    const subs = subsByParent.get(cat.id) ?? []
+    const ids: string[] = []
+    for (const sub of subs) {
+      const subCases = casesBySubcat.bySubcat.get(sub.id) ?? []
+      for (const c of subCases) ids.push(c.id)
+    }
+    const direct = casesBySubcat.bySubcat.get(cat.id) ?? []
+    for (const c of direct) ids.push(c.id)
+    return ids
+  }
+
+  const groupSelectionState = (ids: string[]): 'all' | 'partial' | 'none' => {
+    if (ids.length === 0) return 'none'
+    const selected = ids.filter((id) => selectedIds.has(id)).length
+    if (selected === ids.length) return 'all'
+    if (selected > 0) return 'partial'
+    return 'none'
+  }
+
   const toggleCat = (catId: string): void => {
     setCollapsedCats((prev) => {
       const next = new Set(prev)
@@ -409,16 +441,24 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
               subs.reduce((s, sub) => s + (casesBySubcat.bySubcat.get(sub.id)?.length ?? 0), 0) +
               (casesBySubcat.bySubcat.get(cat.id)?.length ?? 0)
             const isCollapsed = collapsedCats.has(cat.id)
+            const catIds = collectCategoryCaseIds(cat)
+            const catState = groupSelectionState(catIds)
 
             return (
               <section key={cat.id} className="mb-7">
                 {/* Category header */}
                 <header
                   className={[
-                    'mb-1.5 flex items-baseline gap-3 border-b border-[var(--border)] pb-2.5',
+                    'mb-1.5 flex items-center gap-3 border-b border-[var(--border)] pb-2.5',
                     isCollapsed ? '[&_.toggle-icon]:rotate-[-90deg]' : ''
                   ].join(' ')}
                 >
+                  <GroupSelectCheckbox
+                    state={catState}
+                    disabled={catIds.length === 0}
+                    label={`Select all cases in ${cat.name}`}
+                    onClick={() => setSelectionForIds(catIds, catState !== 'all')}
+                  />
                   <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-foreground m-0">
                     {cat.name}
                   </h3>
@@ -437,9 +477,18 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
                   <>
                     {subs.map((sub) => {
                       const subCases = casesBySubcat.bySubcat.get(sub.id) ?? []
+                      const subIds = subCases.map((c) => c.id)
+                      const subState = groupSelectionState(subIds)
                       return (
                         <div key={sub.id} className="mb-[18px] mt-2">
                           <div className="flex items-center gap-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--fg-subtle)]">
+                            <GroupSelectCheckbox
+                              state={subState}
+                              disabled={subIds.length === 0}
+                              label={`Select all cases in ${sub.name}`}
+                              onClick={() => setSelectionForIds(subIds, subState !== 'all')}
+                              compact
+                            />
                             <span>{sub.name}</span>
                             <span className="font-mono text-[10.5px] font-medium normal-case tracking-normal text-[var(--fg-faint)]">
                               {subCases.length}
@@ -488,27 +537,39 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
           })}
 
           {/* Orphan cases when cats exist */}
-          {casesBySubcat.orphans.length > 0 && topCats.length > 0 && (
-            <section className="mb-7">
-              <header className="mb-1.5 flex items-baseline gap-3 border-b border-[var(--border)] pb-2.5">
-                <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-[var(--fg-muted)] m-0">
-                  Uncategorized
-                </h3>
-                <span className="font-mono text-[11px] text-[var(--fg-subtle)]">
-                  {casesBySubcat.orphans.length}
-                </span>
-              </header>
-              {casesBySubcat.orphans.map((c) => (
-                <CaseRow
-                  key={c.id}
-                  tc={c}
-                  projectId={projectId}
-                  selected={selectedIds.has(c.id)}
-                  onToggle={() => toggleSelect(c.id)}
-                />
-              ))}
-            </section>
-          )}
+          {casesBySubcat.orphans.length > 0 &&
+            topCats.length > 0 &&
+            (() => {
+              const orphanIds = casesBySubcat.orphans.map((c) => c.id)
+              const orphanState = groupSelectionState(orphanIds)
+              return (
+                <section className="mb-7">
+                  <header className="mb-1.5 flex items-center gap-3 border-b border-[var(--border)] pb-2.5">
+                    <GroupSelectCheckbox
+                      state={orphanState}
+                      disabled={orphanIds.length === 0}
+                      label="Select all uncategorized cases"
+                      onClick={() => setSelectionForIds(orphanIds, orphanState !== 'all')}
+                    />
+                    <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-[var(--fg-muted)] m-0">
+                      Uncategorized
+                    </h3>
+                    <span className="font-mono text-[11px] text-[var(--fg-subtle)]">
+                      {casesBySubcat.orphans.length}
+                    </span>
+                  </header>
+                  {casesBySubcat.orphans.map((c) => (
+                    <CaseRow
+                      key={c.id}
+                      tc={c}
+                      projectId={projectId}
+                      selected={selectedIds.has(c.id)}
+                      onToggle={() => toggleSelect(c.id)}
+                    />
+                  ))}
+                </section>
+              )
+            })()}
         </>
       )}
 
@@ -696,6 +757,55 @@ function SelBarBtn({
       onClick={onClick}
     >
       {icon}
+    </button>
+  )
+}
+
+function GroupSelectCheckbox({
+  state,
+  disabled = false,
+  label,
+  onClick,
+  compact = false
+}: {
+  state: 'all' | 'partial' | 'none'
+  disabled?: boolean
+  label: string
+  onClick: () => void
+  compact?: boolean
+}): React.JSX.Element {
+  const size = compact ? 'size-[12px]' : 'size-[14px]'
+  const iconSize = compact ? 'size-[9px]' : 'size-[10px]'
+  return (
+    <button
+      type="button"
+      className={[
+        'grid shrink-0 place-items-center rounded-[3px] border-[1.2px] transition-[background,border-color,opacity] duration-[120ms]',
+        size,
+        disabled
+          ? 'cursor-not-allowed border-[var(--border)] bg-transparent opacity-30'
+          : state === 'all'
+            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+            : state === 'partial'
+              ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+              : 'border-[var(--border-strong)] bg-[var(--surface-1)] hover:border-[var(--fg-subtle)]'
+      ].join(' ')}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (!disabled) onClick()
+      }}
+      aria-label={label}
+      aria-pressed={state === 'all'}
+      disabled={disabled}
+    >
+      {state === 'all' && <Check className={iconSize} strokeWidth={2.4} />}
+      {state === 'partial' && (
+        <span
+          className="block rounded-[1.5px] bg-[var(--accent)]"
+          style={{ width: compact ? 6 : 8, height: 1.5 }}
+          aria-hidden="true"
+        />
+      )}
     </button>
   )
 }
