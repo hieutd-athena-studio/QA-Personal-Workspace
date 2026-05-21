@@ -22,9 +22,14 @@ interface Props {
 }
 
 interface PlanProgress {
-  totalCycles: number
-  completedCycles: number
+  pass: number
+  fail: number
+  blocked: number
+  unexecuted: number
+  total: number
 }
+
+const EMPTY_PROGRESS: PlanProgress = { pass: 0, fail: 0, blocked: 0, unexecuted: 0, total: 0 }
 
 export function PlansPane({ projectId }: Props): React.JSX.Element {
   const { data: plans } = useTestPlans(projectId)
@@ -39,7 +44,7 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
     cyclesByPlan.set(c.plan_id, (cyclesByPlan.get(c.plan_id) ?? 0) + 1)
   }
 
-  // Fetch progress for every cycle in this project — used to derive plan progress
+  // Fetch progress for every cycle in this project — aggregated per plan
   const progressQueries = useQueries({
     queries: cycles.map((c) => ({
       queryKey: ['assignments', c.id, 'progress'] as const,
@@ -52,11 +57,13 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
     const map = new Map<string, PlanProgress>()
     cycles.forEach((cycle, idx) => {
       const data = progressQueries[idx]?.data
-      const slot = map.get(cycle.plan_id) ?? { totalCycles: 0, completedCycles: 0 }
-      slot.totalCycles += 1
-      if (data && data.total > 0 && data.unexecuted === 0) {
-        slot.completedCycles += 1
-      }
+      if (!data) return
+      const slot = map.get(cycle.plan_id) ?? { ...EMPTY_PROGRESS }
+      slot.pass += data.pass
+      slot.fail += data.fail
+      slot.blocked += data.blocked
+      slot.unexecuted += data.unexecuted
+      slot.total += data.total
       map.set(cycle.plan_id, slot)
     })
     return map
@@ -97,7 +104,7 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
       ) : (
         <div className="space-y-2.5">
           {(plans ?? []).map((plan) => {
-            const progress = progressByPlan.get(plan.id) ?? { totalCycles: 0, completedCycles: 0 }
+            const progress = progressByPlan.get(plan.id) ?? EMPTY_PROGRESS
             return (
               <PlanRow
                 key={plan.id}
@@ -158,9 +165,9 @@ function PlanRow({
   progress: PlanProgress
   onDelete: () => void
 }): React.JSX.Element {
-  const pct =
-    progress.totalCycles === 0 ? 0 : (progress.completedCycles / progress.totalCycles) * 100
-  const isComplete = progress.totalCycles > 0 && progress.completedCycles === progress.totalCycles
+  const pct = (n: number): string =>
+    progress.total === 0 ? '0' : `${((n / progress.total) * 100).toFixed(1)}`
+  const done = progress.pass + progress.fail + progress.blocked
   return (
     <div
       className="grid items-center gap-[18px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5"
@@ -194,29 +201,31 @@ function PlanRow({
 
       {/* Progress + actions */}
       <div className="min-w-[220px]">
-        {/* Cycle-completion progress bar */}
+        {/* Stacked P/F/B progress bar aggregated across plan's cycles */}
         <div
-          className="mb-2.5 flex items-center gap-2"
-          aria-label={`${progress.completedCycles} of ${progress.totalCycles} cycles complete`}
+          className="mb-2.5 flex items-center gap-2.5"
+          aria-label={`${done} of ${progress.total} cases executed`}
         >
           <div
             className="flex h-1.5 flex-1 overflow-hidden rounded-full"
             style={{ background: 'rgba(255,255,255,0.05)' }}
-            role="progressbar"
-            aria-valuenow={Math.round(pct)}
-            aria-valuemin={0}
-            aria-valuemax={100}
           >
-            <div
-              className="h-full rounded-full transition-[width] duration-[320ms]"
-              style={{
-                width: `${pct}%`,
-                background: isComplete ? 'var(--pass)' : 'var(--accent)'
-              }}
+            <i
+              className="block h-full bg-[var(--pass)] transition-[width] duration-[320ms]"
+              style={{ width: `${pct(progress.pass)}%` }}
+            />
+            <i
+              className="block h-full bg-[var(--fail)] transition-[width] duration-[320ms]"
+              style={{ width: `${pct(progress.fail)}%` }}
+            />
+            <i
+              className="block h-full bg-[var(--blocked)] transition-[width] duration-[320ms]"
+              style={{ width: `${pct(progress.blocked)}%` }}
             />
           </div>
-          <span className="font-mono text-[11px] text-[var(--fg-muted)]">
-            {progress.completedCycles} / {progress.totalCycles}
+          <span className="whitespace-nowrap font-mono text-[11px] text-[var(--fg-muted)] tabular-nums">
+            {done}
+            <span className="opacity-50">/{progress.total}</span>
           </span>
         </div>
 

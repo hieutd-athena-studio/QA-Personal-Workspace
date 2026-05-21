@@ -100,22 +100,12 @@ export function ReportsPane({ projectId }: Props): React.JSX.Element {
   )
 }
 
-type BreakdownFilter = 'all' | 'Fail' | 'Pass' | 'Blocked'
-
-const STATUS_PRIORITY: Record<AssignmentStatus, number> = {
-  Fail: 0,
-  Blocked: 1,
-  Pass: 2,
-  Unexecuted: 3
-}
-
 function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   const { data: cycles } = useTestCyclesForProject(projectId)
   const { data: plans } = useTestPlans(projectId)
   const [cycleId, setCycleId] = useState<string>('')
   const { data: progress } = useCycleProgress(cycleId || undefined)
   const { data: assignments } = useAssignments(cycleId || undefined)
-  const [breakdownFilter, setBreakdownFilter] = useState<BreakdownFilter>('all')
 
   const selectedCycle = (cycles ?? []).find((c) => c.id === cycleId)
   const selectedPlan = (plans ?? []).find((p) => p.id === selectedCycle?.plan_id)
@@ -124,16 +114,19 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   const total = p?.total ?? 0
   const pct = (n: number): number => (total === 0 ? 0 : Math.round((n / total) * 100))
 
+  // Sort by execution order: executed first (newest → oldest), then unexecuted by display_id
   const orderedAssignments = useMemo(() => {
     const list = [...(assignments ?? [])]
     list.sort((a, b) => {
-      const d = (STATUS_PRIORITY[a.status] ?? 9) - (STATUS_PRIORITY[b.status] ?? 9)
-      if (d !== 0) return d
+      if (a.executed_at && b.executed_at) {
+        return b.executed_at.localeCompare(a.executed_at)
+      }
+      if (a.executed_at) return -1
+      if (b.executed_at) return 1
       return a.test_case_display_id.localeCompare(b.test_case_display_id)
     })
-    if (breakdownFilter === 'all') return list
-    return list.filter((a) => a.status === breakdownFilter)
-  }, [assignments, breakdownFilter])
+    return list
+  }, [assignments])
 
   const handleExport = async (): Promise<void> => {
     if (!cycleId) return
@@ -242,63 +235,38 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
 
           {/* Per-case breakdown */}
           <div>
-            <div className="mb-3 flex flex-wrap items-baseline gap-2">
+            <div className="mb-3 flex items-baseline gap-3">
               <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-foreground">
                 Per-case breakdown
               </h3>
               <span className="text-[12px] text-[var(--fg-subtle)]">
-                Failed and blocked appear first.
+                Sorted by execution order.
               </span>
-              <div className="ml-auto">
-                <BreakdownFilterTabs
-                  value={breakdownFilter}
-                  counts={{
-                    all: assignments?.length ?? 0,
-                    Fail: (assignments ?? []).filter((a) => a.status === 'Fail').length,
-                    Pass: (assignments ?? []).filter((a) => a.status === 'Pass').length,
-                    Blocked: (assignments ?? []).filter((a) => a.status === 'Blocked').length
-                  }}
-                  onChange={setBreakdownFilter}
-                />
-              </div>
             </div>
 
             {orderedAssignments.length === 0 ? (
               <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] px-6 py-8 text-center text-[12.5px] text-[var(--fg-muted)]">
-                {assignments && assignments.length === 0
-                  ? 'No cases assigned to this cycle yet.'
-                  : 'No cases match this filter.'}
+                No cases assigned to this cycle yet.
               </div>
             ) : (
               <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
-                <div
-                  className="grid items-center border-b border-[var(--border)] bg-white/[0.02] px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--fg-subtle)]"
-                  style={{ gridTemplateColumns: '88px 1fr 1fr 92px' }}
-                >
-                  <div>Status</div>
-                  <div>ID + name</div>
-                  <div>Notes</div>
-                  <div className="text-right">Last run</div>
-                </div>
-                {orderedAssignments.map((a) => (
+                {orderedAssignments.map((a, idx) => (
                   <div
                     key={a.id}
-                    className="grid items-center border-t border-[var(--border-soft)] px-3.5 py-2 text-[12.5px] transition-colors hover:bg-white/[0.03]"
-                    style={{ gridTemplateColumns: '88px 1fr 1fr 92px' }}
+                    className={[
+                      'grid items-center gap-3.5 px-3.5 py-2.5 text-[12.5px] transition-colors hover:bg-white/[0.03]',
+                      idx > 0 ? 'border-t border-[var(--border-soft)]' : ''
+                    ].join(' ')}
+                    style={{ gridTemplateColumns: 'auto auto 1fr auto' }}
                   >
-                    <StatusPill status={a.status} />
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="shrink-0 font-mono text-[11.5px] text-[var(--fg-subtle)]">
-                        {a.test_case_display_id}
-                      </span>
-                      <span className="truncate text-foreground">{a.test_case_name}</span>
-                    </div>
-                    <div className="truncate text-[var(--fg-muted)]">
-                      {a.notes ? a.notes : <span className="text-[var(--fg-faint)]">—</span>}
-                    </div>
-                    <div className="text-right font-mono text-[11px] text-[var(--fg-subtle)] tabular-nums">
+                    <BreakdownStatusDot status={a.status} />
+                    <span className="font-mono text-[11.5px] text-[var(--fg-subtle)]">
+                      {a.test_case_display_id}
+                    </span>
+                    <span className="truncate text-foreground">{a.test_case_name}</span>
+                    <span className="font-mono text-[11px] text-[var(--fg-faint)] tabular-nums">
                       {a.executed_at ? new Date(a.executed_at).toLocaleDateString() : '—'}
-                    </div>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -322,92 +290,20 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   )
 }
 
-function BreakdownFilterTabs({
-  value,
-  counts,
-  onChange
-}: {
-  value: BreakdownFilter
-  counts: { all: number; Fail: number; Pass: number; Blocked: number }
-  onChange: (v: BreakdownFilter) => void
-}): React.JSX.Element {
-  const opts: { key: BreakdownFilter; label: string; dot?: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'Fail', label: 'Failed', dot: 'var(--fail)' },
-    { key: 'Blocked', label: 'Blocked', dot: 'var(--blocked)' },
-    { key: 'Pass', label: 'Passed', dot: 'var(--pass)' }
-  ]
-  return (
-    <div
-      className="inline-flex gap-px rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-0.5"
-      role="tablist"
-    >
-      {opts.map((o) => {
-        const active = value === o.key
-        const count = counts[o.key]
-        return (
-          <button
-            key={o.key}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o.key)}
-            className={[
-              'inline-flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-[12px] font-medium transition-colors duration-[120ms]',
-              active
-                ? 'bg-white/[0.08] text-foreground'
-                : 'bg-transparent text-[var(--fg-muted)] hover:text-foreground'
-            ].join(' ')}
-          >
-            {o.dot && (
-              <span
-                className="size-1.5 rounded-full"
-                style={{ background: o.dot }}
-                aria-hidden="true"
-              />
-            )}
-            {o.label}
-            <span className="font-mono text-[10.5px] text-[var(--fg-subtle)]">{count}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function StatusPill({ status }: { status: AssignmentStatus }): React.JSX.Element {
-  const cfg: Record<AssignmentStatus, { label: string; dot: string; cls: string }> = {
-    Pass: {
-      label: 'Pass',
-      dot: 'var(--pass)',
-      cls: 'border-[rgba(16,185,129,0.3)] bg-[var(--pass-soft)] text-[#34d399]'
-    },
-    Fail: {
-      label: 'Fail',
-      dot: 'var(--fail)',
-      cls: 'border-[rgba(239,68,68,0.3)] bg-[var(--fail-soft)] text-[#fca5a5]'
-    },
-    Blocked: {
-      label: 'Blocked',
-      dot: 'var(--blocked)',
-      cls: 'border-[rgba(245,158,11,0.3)] bg-[var(--blocked-soft)] text-[#fcd34d]'
-    },
-    Unexecuted: {
-      label: 'Open',
-      dot: 'var(--unexec)',
-      cls: 'border-[var(--border)] bg-[var(--unexec-soft)] text-[var(--fg-muted)]'
-    }
+function BreakdownStatusDot({ status }: { status: AssignmentStatus }): React.JSX.Element {
+  if (status === 'Unexecuted') {
+    return (
+      <span
+        className="block size-2 rounded-full"
+        style={{ background: 'transparent', boxShadow: 'inset 0 0 0 1.5px var(--unexec)' }}
+        aria-label="Unexecuted"
+      />
+    )
   }
-  const c = cfg[status]
+  const color =
+    status === 'Pass' ? 'var(--pass)' : status === 'Fail' ? 'var(--fail)' : 'var(--blocked)'
   return (
-    <span
-      className={[
-        'inline-flex h-5 w-fit items-center gap-1.5 rounded-full border px-2 text-[11px] font-medium',
-        c.cls
-      ].join(' ')}
-    >
-      <span className="size-1.5 rounded-full" style={{ background: c.dot }} aria-hidden="true" />
-      {c.label}
-    </span>
+    <span className="block size-2 rounded-full" style={{ background: color }} aria-label={status} />
   )
 }
 
@@ -431,17 +327,6 @@ function ReportStat({
     unexec: 'var(--unexec)'
   }
 
-  const lineColor =
-    dot === 'pass'
-      ? 'var(--pass)'
-      : dot === 'fail'
-        ? 'var(--fail)'
-        : dot === 'blocked'
-          ? 'var(--blocked)'
-          : dot === 'unexec'
-            ? 'var(--unexec)'
-            : 'var(--accent)'
-
   return (
     <div>
       <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--fg-subtle)]">
@@ -460,12 +345,7 @@ function ReportStat({
           <span className="ml-2 text-[14px] font-normal text-[var(--fg-muted)]">{pct}%</span>
         )}
       </div>
-      <span
-        className="mt-1.5 block h-px w-8 rounded-full"
-        style={{ background: lineColor }}
-        aria-hidden="true"
-      />
-      <div className="mt-1.5 text-[11.5px] text-[var(--fg-subtle)]">{sub}</div>
+      <div className="mt-0.5 text-[11.5px] text-[var(--fg-subtle)]">{sub}</div>
     </div>
   )
 }

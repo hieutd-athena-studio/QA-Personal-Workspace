@@ -141,9 +141,8 @@ export function CommandPalette({ onNewProject, onShowShortcuts }: Props): React.
             className="gap-2.5 px-3.5 py-1.5 text-[13px] text-foreground data-[selected=true]:bg-[var(--accent-soft)] data-[selected=true]:text-foreground"
           >
             <span className="flex-1">New project…</span>
-            <CommandShortcut className="flex gap-0.5">
-              <span className="kbd dim">⌘</span>
-              <span className="kbd dim">N</span>
+            <CommandShortcut>
+              <span className="kbd dim">⌘N</span>
             </CommandShortcut>
           </CommandItem>
         </CommandGroup>

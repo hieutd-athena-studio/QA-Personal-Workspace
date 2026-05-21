@@ -10,7 +10,7 @@ interface ShortcutRowProps {
 
 function ShortcutRow({ label, keys }: ShortcutRowProps): React.JSX.Element {
   return (
-    <div className="flex items-center border-t border-[var(--border-soft)] py-1.5 first:border-t-0">
+    <div className="flex items-center py-1.5">
       <span className="flex-1 text-[12.5px] text-[var(--fg-muted)]">{label}</span>
       <span className="flex gap-1">
         {keys.map((k, i) => (

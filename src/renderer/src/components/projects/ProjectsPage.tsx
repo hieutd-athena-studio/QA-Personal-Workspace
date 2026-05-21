@@ -26,16 +26,13 @@ export function ProjectsPage(): React.JSX.Element {
                 <span className="text-[var(--fg-faint)]" aria-hidden="true">
                   ·
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  Press
-                  <span className="inline-flex gap-0.5">
-                    <span className="kbd">
-                      {typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
-                        ? '⌘'
-                        : 'Ctrl'}
-                    </span>
-                    <span className="kbd">K</span>
-                  </span>
+                <span>
+                  Press{' '}
+                  <kbd className="kbd">
+                    {typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+                      ? '⌘K'
+                      : 'Ctrl K'}
+                  </kbd>{' '}
                   to jump anywhere.
                 </span>
               </div>

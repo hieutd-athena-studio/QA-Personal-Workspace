@@ -120,29 +120,25 @@ function ProjectRow({ project, index, onDeleteRequest }: RowProps): React.JSX.El
       aria-label={project.name}
       role="listitem"
     >
-      {/* 6-column grid: avatar | prefix | name+desc | spacer | stats | actions */}
+      {/* 6-column grid: swatch | prefix | name+desc | spacer | stats | actions */}
       <div
         className="grid items-center gap-4 px-5 py-4"
-        style={{ gridTemplateColumns: '36px auto auto 1fr auto auto' }}
+        style={{ gridTemplateColumns: '14px auto auto 1fr auto auto' }}
       >
-        {/* Logo or color avatar — 36×36px */}
+        {/* Logo or color swatch — 12×12px */}
         {project.logo ? (
           <span
-            className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)]"
+            className="block size-3 shrink-0 overflow-hidden rounded-[3px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
             aria-hidden="true"
           >
-            <img src={project.logo} alt="" className="size-full object-contain" />
+            <img src={project.logo} alt="" className="size-full object-cover" />
           </span>
         ) : (
           <span
-            className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
+            className="block size-3 shrink-0 rounded-[3px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
             style={{ backgroundColor: project.color }}
             aria-hidden="true"
-          >
-            <span className="font-mono text-[11px] font-semibold text-white/90 mix-blend-luminosity">
-              {project.display_prefix.slice(0, 2)}
-            </span>
-          </span>
+          />
         )}
 
         {/* Prefix */}

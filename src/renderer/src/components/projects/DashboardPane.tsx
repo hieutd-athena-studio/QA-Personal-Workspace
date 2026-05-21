@@ -116,10 +116,6 @@ export function DashboardPane({ project }: Props): React.JSX.Element {
               / {maxDays.toFixed(0)} days
             </span>
           </div>
-          <span
-            className="mt-2 block h-px w-8 rounded-full bg-[var(--accent)]"
-            aria-hidden="true"
-          />
           <p className="mt-3 text-[12px] leading-[1.55] text-[var(--fg-muted)]">
             Total planned work across active test plans.{' '}
             <span className="text-[var(--fg-subtle)]">0.25-day granularity.</span>
@@ -156,7 +152,6 @@ function StatBlock({ label, value }: { label: string; value: number }): React.JS
       <div className="mt-0.5 text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] tabular-nums text-foreground">
         {value}
       </div>
-      <span className="mt-2 block h-px w-8 rounded-full bg-[var(--accent)]" aria-hidden="true" />
     </div>
   )
 }

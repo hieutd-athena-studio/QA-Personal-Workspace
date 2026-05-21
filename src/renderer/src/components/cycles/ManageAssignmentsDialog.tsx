@@ -1,11 +1,10 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
-import { Layers, Search, X, Check } from 'lucide-react'
+import { Search, X, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTestCycle } from '@renderer/hooks/useTestCycles'
 import { useTestPlan } from '@renderer/hooks/useTestPlans'
 import { useTestCases } from '@renderer/hooks/useTestCases'
-import { useTestTypes } from '@renderer/hooks/useTestTypes'
 import { useAssignCases, useAssignments, useBatchUnassign } from '@renderer/hooks/useAssignments'
 import {
   Dialog,
@@ -15,13 +14,6 @@ import {
   DialogDescription,
   DialogFooter
 } from '@renderer/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@renderer/components/ui/select'
 
 interface Props {
   projectId: string
@@ -38,43 +30,13 @@ export function ManageAssignmentsDialog({
 }: Props): React.JSX.Element {
   const { data: cycle } = useTestCycle(cycleId)
   const { data: plan } = useTestPlan(cycle?.plan_id)
-  const effectiveProjectId = plan?.project_id ?? projectId
-  const { data: allCases } = useTestCases(effectiveProjectId)
-  const { data: testTypes } = useTestTypes(effectiveProjectId)
+  const { data: allCases } = useTestCases(plan?.project_id ?? projectId)
   const { data: assigned } = useAssignments(cycleId)
   const assign = useAssignCases(cycleId)
   const unassign = useBatchUnassign(cycleId)
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('')
-  const [importingType, setImportingType] = useState(false)
-
-  const importFromType = async (typeId: string): Promise<void> => {
-    if (!typeId) return
-    setImportingType(true)
-    try {
-      const ids = await window.api.types.getCases(typeId)
-      if (ids.length === 0) {
-        toast.message('Test type has no cases')
-        return
-      }
-      const before = selected.size
-      setSelected((prev) => {
-        const next = new Set(prev)
-        for (const id of ids) next.add(id)
-        return next
-      })
-      const newlyAdded = ids.filter((id) => !selected.has(id)).length
-      toast.success(
-        `Added ${newlyAdded} case${newlyAdded === 1 ? '' : 's'} from test type` +
-          (before === 0 ? '' : ` (already had ${before})`)
-      )
-    } catch (e) {
-      toast.error((e as Error).message)
-    } finally {
-      setImportingType(false)
-    }
-  }
 
   useEffect(() => {
     setSelected(new Set((assigned ?? []).map((a) => a.test_case_id)))
@@ -141,58 +103,26 @@ export function ManageAssignmentsDialog({
 
         {/* Body */}
         <div className="flex flex-col gap-3 px-5 py-3 flex-1 min-h-0 overflow-y-auto">
-          {/* Quick import + Search row */}
-          <div className="flex items-center gap-2">
-            <Select
-              value=""
-              onValueChange={(v) => void importFromType(v)}
-              disabled={!testTypes || testTypes.length === 0 || importingType}
-            >
-              <SelectTrigger
-                className="h-8 min-w-[200px] rounded-md border-[var(--border)] bg-[var(--surface-1)] text-[12.5px]"
-                aria-label="Import cases from test type"
+          {/* Search input */}
+          <div className="flex items-center gap-2 h-8 rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-2.5 focus-within:border-[var(--accent-ring)] focus-within:bg-[var(--surface-2)] transition-colors">
+            <Search className="size-3.5 text-[var(--fg-faint)] shrink-0" />
+            <input
+              type="text"
+              placeholder="Search test cases…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="flex-1 bg-transparent border-0 outline-none text-[13.5px] text-foreground placeholder:text-[var(--fg-faint)]"
+            />
+            {filter && (
+              <button
+                type="button"
+                onClick={() => setFilter('')}
+                aria-label="Clear search"
+                className="text-[var(--fg-faint)] hover:text-foreground transition-colors"
               >
-                <span className="inline-flex items-center gap-1.5 truncate text-[var(--fg-muted)]">
-                  <Layers className="size-3.5" />
-                  <SelectValue
-                    placeholder={
-                      !testTypes || testTypes.length === 0
-                        ? 'No test types'
-                        : importingType
-                          ? 'Importing…'
-                          : 'Import from test type…'
-                    }
-                  />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {(testTypes ?? []).map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex flex-1 items-center gap-2 h-8 rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-2.5 focus-within:border-[var(--accent-ring)] focus-within:bg-[var(--surface-2)] transition-colors">
-              <Search className="size-3.5 text-[var(--fg-faint)] shrink-0" />
-              <input
-                type="text"
-                placeholder="Search test cases…"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="flex-1 bg-transparent border-0 outline-none text-[13.5px] text-foreground placeholder:text-[var(--fg-faint)]"
-              />
-              {filter && (
-                <button
-                  type="button"
-                  onClick={() => setFilter('')}
-                  aria-label="Clear search"
-                  className="text-[var(--fg-faint)] hover:text-foreground transition-colors"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
+                <X className="size-3" />
+              </button>
+            )}
           </div>
 
           {/* Checklist */}
