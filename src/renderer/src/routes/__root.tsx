@@ -75,7 +75,10 @@ function RootLayout(): React.JSX.Element {
             <span className="flex-1 truncate text-left text-[12.5px]">
               Search test cases, jump to cycle…
             </span>
-            <span className="kbd shrink-0">⌘K</span>
+            <span className="ml-auto flex shrink-0 gap-0.5">
+              <span className="kbd">⌘</span>
+              <span className="kbd">K</span>
+            </span>
           </button>
 
           {/* Theme toggle */}

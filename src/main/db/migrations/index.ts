@@ -149,4 +149,19 @@ const m0002_core_entities: Migration = {
   }
 }
 
-export const ALL_MIGRATIONS: Migration[] = [m0001_initial, m0002_core_entities]
+const m0003_add_project_logo: Migration = {
+  version: 3,
+  name: '0003-add-project-logo',
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]
+    if (!cols.some((c) => c.name === 'logo')) {
+      db.exec(`ALTER TABLE projects ADD COLUMN logo TEXT;`)
+    }
+  }
+}
+
+export const ALL_MIGRATIONS: Migration[] = [
+  m0001_initial,
+  m0002_core_entities,
+  m0003_add_project_logo
+]

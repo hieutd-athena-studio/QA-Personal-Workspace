@@ -101,10 +101,11 @@ function SlidingTabBar({
       ))}
       {/* Sliding indicator */}
       <div
-        className="pointer-events-none absolute bottom-[-1px] h-[2px] rounded-[1px] bg-[var(--accent)]"
+        className="pointer-events-none absolute bottom-[-1.5px] h-[3px] rounded-full bg-[var(--accent)]"
         style={{
           left: ind.left,
           width: ind.width,
+          boxShadow: '0 1px 6px var(--accent-soft)',
           transition: 'left 200ms var(--ease-out-back), width 200ms var(--ease-out-back)'
         }}
       />
@@ -143,16 +144,25 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
         </Link>
 
         <div className="flex items-start gap-3.5">
-          {/* Color swatch with inset highlight */}
-          <span
-            className="mt-0.5 size-9 shrink-0 rounded-[var(--radius-md)]"
-            style={{
-              backgroundColor: project.color,
-              boxShadow:
-                'inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25)'
-            }}
-            aria-hidden="true"
-          />
+          {/* Logo or color swatch */}
+          {project.logo ? (
+            <span
+              className="mt-0.5 grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)]"
+              aria-hidden="true"
+            >
+              <img src={project.logo} alt="" className="size-full object-contain" />
+            </span>
+          ) : (
+            <span
+              className="mt-0.5 size-9 shrink-0 rounded-[var(--radius-md)]"
+              style={{
+                backgroundColor: project.color,
+                boxShadow:
+                  'inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25)'
+              }}
+              aria-hidden="true"
+            />
+          )}
 
           <div className="min-w-0 flex-1">
             <div className="font-mono text-[11.5px] tracking-[0.04em] text-[var(--fg-subtle)]">

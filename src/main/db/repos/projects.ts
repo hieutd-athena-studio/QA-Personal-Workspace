@@ -34,6 +34,7 @@ export function createProject(db: Db, input: NewProjectInput): Project {
     name: parsed.name,
     description: parsed.description ?? null,
     color: parsed.color,
+    logo: parsed.logo ?? null,
     case_counter: 0,
     plan_counter: 0,
     created_at: now,

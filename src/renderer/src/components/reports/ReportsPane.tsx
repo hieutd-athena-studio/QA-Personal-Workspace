@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -10,7 +10,8 @@ import {
 } from '@renderer/components/ui/select'
 import { useTestCyclesForProject } from '@renderer/hooks/useTestCycles'
 import { useTestPlans } from '@renderer/hooks/useTestPlans'
-import { useCycleProgress } from '@renderer/hooks/useAssignments'
+import { useAssignments, useCycleProgress } from '@renderer/hooks/useAssignments'
+import type { AssignmentStatus } from '@shared/types/assignments'
 import { exportCycleCsv } from './export-csv'
 import { MultiCycleReport } from './MultiCycleReport'
 
@@ -99,11 +100,22 @@ export function ReportsPane({ projectId }: Props): React.JSX.Element {
   )
 }
 
+type BreakdownFilter = 'all' | 'Fail' | 'Pass' | 'Blocked'
+
+const STATUS_PRIORITY: Record<AssignmentStatus, number> = {
+  Fail: 0,
+  Blocked: 1,
+  Pass: 2,
+  Unexecuted: 3
+}
+
 function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   const { data: cycles } = useTestCyclesForProject(projectId)
   const { data: plans } = useTestPlans(projectId)
   const [cycleId, setCycleId] = useState<string>('')
   const { data: progress } = useCycleProgress(cycleId || undefined)
+  const { data: assignments } = useAssignments(cycleId || undefined)
+  const [breakdownFilter, setBreakdownFilter] = useState<BreakdownFilter>('all')
 
   const selectedCycle = (cycles ?? []).find((c) => c.id === cycleId)
   const selectedPlan = (plans ?? []).find((p) => p.id === selectedCycle?.plan_id)
@@ -111,6 +123,17 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
   const p = progress
   const total = p?.total ?? 0
   const pct = (n: number): number => (total === 0 ? 0 : Math.round((n / total) * 100))
+
+  const orderedAssignments = useMemo(() => {
+    const list = [...(assignments ?? [])]
+    list.sort((a, b) => {
+      const d = (STATUS_PRIORITY[a.status] ?? 9) - (STATUS_PRIORITY[b.status] ?? 9)
+      if (d !== 0) return d
+      return a.test_case_display_id.localeCompare(b.test_case_display_id)
+    })
+    if (breakdownFilter === 'all') return list
+    return list.filter((a) => a.status === breakdownFilter)
+  }, [assignments, breakdownFilter])
 
   const handleExport = async (): Promise<void> => {
     if (!cycleId) return
@@ -216,6 +239,71 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
               Plan {selectedPlan.display_id} · Environment {selectedCycle.environment}
             </p>
           )}
+
+          {/* Per-case breakdown */}
+          <div>
+            <div className="mb-3 flex flex-wrap items-baseline gap-2">
+              <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-foreground">
+                Per-case breakdown
+              </h3>
+              <span className="text-[12px] text-[var(--fg-subtle)]">
+                Failed and blocked appear first.
+              </span>
+              <div className="ml-auto">
+                <BreakdownFilterTabs
+                  value={breakdownFilter}
+                  counts={{
+                    all: assignments?.length ?? 0,
+                    Fail: (assignments ?? []).filter((a) => a.status === 'Fail').length,
+                    Pass: (assignments ?? []).filter((a) => a.status === 'Pass').length,
+                    Blocked: (assignments ?? []).filter((a) => a.status === 'Blocked').length
+                  }}
+                  onChange={setBreakdownFilter}
+                />
+              </div>
+            </div>
+
+            {orderedAssignments.length === 0 ? (
+              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] px-6 py-8 text-center text-[12.5px] text-[var(--fg-muted)]">
+                {assignments && assignments.length === 0
+                  ? 'No cases assigned to this cycle yet.'
+                  : 'No cases match this filter.'}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
+                <div
+                  className="grid items-center border-b border-[var(--border)] bg-white/[0.02] px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--fg-subtle)]"
+                  style={{ gridTemplateColumns: '88px 1fr 1fr 92px' }}
+                >
+                  <div>Status</div>
+                  <div>ID + name</div>
+                  <div>Notes</div>
+                  <div className="text-right">Last run</div>
+                </div>
+                {orderedAssignments.map((a) => (
+                  <div
+                    key={a.id}
+                    className="grid items-center border-t border-[var(--border-soft)] px-3.5 py-2 text-[12.5px] transition-colors hover:bg-white/[0.03]"
+                    style={{ gridTemplateColumns: '88px 1fr 1fr 92px' }}
+                  >
+                    <StatusPill status={a.status} />
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 font-mono text-[11.5px] text-[var(--fg-subtle)]">
+                        {a.test_case_display_id}
+                      </span>
+                      <span className="truncate text-foreground">{a.test_case_name}</span>
+                    </div>
+                    <div className="truncate text-[var(--fg-muted)]">
+                      {a.notes ? a.notes : <span className="text-[var(--fg-faint)]">—</span>}
+                    </div>
+                    <div className="text-right font-mono text-[11px] text-[var(--fg-subtle)] tabular-nums">
+                      {a.executed_at ? new Date(a.executed_at).toLocaleDateString() : '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -231,6 +319,95 @@ function SingleCycleReport({ projectId }: Props): React.JSX.Element {
         </div>
       )}
     </div>
+  )
+}
+
+function BreakdownFilterTabs({
+  value,
+  counts,
+  onChange
+}: {
+  value: BreakdownFilter
+  counts: { all: number; Fail: number; Pass: number; Blocked: number }
+  onChange: (v: BreakdownFilter) => void
+}): React.JSX.Element {
+  const opts: { key: BreakdownFilter; label: string; dot?: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'Fail', label: 'Failed', dot: 'var(--fail)' },
+    { key: 'Blocked', label: 'Blocked', dot: 'var(--blocked)' },
+    { key: 'Pass', label: 'Passed', dot: 'var(--pass)' }
+  ]
+  return (
+    <div
+      className="inline-flex gap-px rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-0.5"
+      role="tablist"
+    >
+      {opts.map((o) => {
+        const active = value === o.key
+        const count = counts[o.key]
+        return (
+          <button
+            key={o.key}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.key)}
+            className={[
+              'inline-flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-[12px] font-medium transition-colors duration-[120ms]',
+              active
+                ? 'bg-white/[0.08] text-foreground'
+                : 'bg-transparent text-[var(--fg-muted)] hover:text-foreground'
+            ].join(' ')}
+          >
+            {o.dot && (
+              <span
+                className="size-1.5 rounded-full"
+                style={{ background: o.dot }}
+                aria-hidden="true"
+              />
+            )}
+            {o.label}
+            <span className="font-mono text-[10.5px] text-[var(--fg-subtle)]">{count}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: AssignmentStatus }): React.JSX.Element {
+  const cfg: Record<AssignmentStatus, { label: string; dot: string; cls: string }> = {
+    Pass: {
+      label: 'Pass',
+      dot: 'var(--pass)',
+      cls: 'border-[rgba(16,185,129,0.3)] bg-[var(--pass-soft)] text-[#34d399]'
+    },
+    Fail: {
+      label: 'Fail',
+      dot: 'var(--fail)',
+      cls: 'border-[rgba(239,68,68,0.3)] bg-[var(--fail-soft)] text-[#fca5a5]'
+    },
+    Blocked: {
+      label: 'Blocked',
+      dot: 'var(--blocked)',
+      cls: 'border-[rgba(245,158,11,0.3)] bg-[var(--blocked-soft)] text-[#fcd34d]'
+    },
+    Unexecuted: {
+      label: 'Open',
+      dot: 'var(--unexec)',
+      cls: 'border-[var(--border)] bg-[var(--unexec-soft)] text-[var(--fg-muted)]'
+    }
+  }
+  const c = cfg[status]
+  return (
+    <span
+      className={[
+        'inline-flex h-5 w-fit items-center gap-1.5 rounded-full border px-2 text-[11px] font-medium',
+        c.cls
+      ].join(' ')}
+    >
+      <span className="size-1.5 rounded-full" style={{ background: c.dot }} aria-hidden="true" />
+      {c.label}
+    </span>
   )
 }
 
@@ -254,6 +431,17 @@ function ReportStat({
     unexec: 'var(--unexec)'
   }
 
+  const lineColor =
+    dot === 'pass'
+      ? 'var(--pass)'
+      : dot === 'fail'
+        ? 'var(--fail)'
+        : dot === 'blocked'
+          ? 'var(--blocked)'
+          : dot === 'unexec'
+            ? 'var(--unexec)'
+            : 'var(--accent)'
+
   return (
     <div>
       <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--fg-subtle)]">
@@ -272,7 +460,12 @@ function ReportStat({
           <span className="ml-2 text-[14px] font-normal text-[var(--fg-muted)]">{pct}%</span>
         )}
       </div>
-      <div className="mt-0.5 text-[11.5px] text-[var(--fg-subtle)]">{sub}</div>
+      <span
+        className="mt-1.5 block h-px w-8 rounded-full"
+        style={{ background: lineColor }}
+        aria-hidden="true"
+      />
+      <div className="mt-1.5 text-[11.5px] text-[var(--fg-subtle)]">{sub}</div>
     </div>
   )
 }

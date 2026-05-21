@@ -136,12 +136,10 @@ function TypeRow({
   onManage: () => void
   onDelete: () => void
 }): React.JSX.Element {
-  const pct = total === 0 ? 0 : (assigned / total) * 100
-
   return (
     <div
       className="grid items-center gap-[18px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5"
-      style={{ gridTemplateColumns: '1fr 220px auto' }}
+      style={{ gridTemplateColumns: '1fr auto auto' }}
     >
       {/* Name + description */}
       <div className="min-w-0">
@@ -151,26 +149,12 @@ function TypeRow({
         )}
       </div>
 
-      {/* Progress bar + count */}
-      <div className="flex items-center gap-2.5">
-        <div
-          className="h-1.5 flex-1 overflow-hidden rounded-full"
-          style={{ background: 'rgba(255,255,255,0.05)' }}
-          role="progressbar"
-          aria-valuenow={Math.round(pct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`${assigned} of ${total} cases assigned`}
-        >
-          <div
-            className="h-full rounded-full transition-[width] duration-[320ms]"
-            style={{ width: `${pct}%`, background: 'var(--accent)' }}
-          />
-        </div>
-        <span className="whitespace-nowrap font-mono text-[11.5px] text-[var(--fg-muted)]">
-          {assigned}/{total}
-        </span>
-      </div>
+      {/* Count badge */}
+      <span className="whitespace-nowrap rounded-full border border-[var(--border)] bg-white/[0.03] px-2.5 py-0.5 font-mono text-[11.5px] text-[var(--fg-muted)]">
+        {assigned}
+        <span className="text-[var(--fg-faint)]">/{total}</span>{' '}
+        <span className="text-[var(--fg-subtle)]">cases</span>
+      </span>
 
       {/* Actions */}
       <div className="flex items-center gap-1.5">

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { useQueries } from '@tanstack/react-query'
 import { CalendarDays, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -20,6 +21,11 @@ interface Props {
   projectId: string
 }
 
+interface PlanProgress {
+  totalCycles: number
+  completedCycles: number
+}
+
 export function PlansPane({ projectId }: Props): React.JSX.Element {
   const { data: plans } = useTestPlans(projectId)
   const { data: allCycles } = useTestCyclesForProject(projectId)
@@ -27,10 +33,34 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const confirmPlan = (plans ?? []).find((p) => p.id === confirmId)
 
+  const cycles = allCycles ?? []
   const cyclesByPlan = new Map<string, number>()
-  for (const c of allCycles ?? []) {
+  for (const c of cycles) {
     cyclesByPlan.set(c.plan_id, (cyclesByPlan.get(c.plan_id) ?? 0) + 1)
   }
+
+  // Fetch progress for every cycle in this project — used to derive plan progress
+  const progressQueries = useQueries({
+    queries: cycles.map((c) => ({
+      queryKey: ['assignments', c.id, 'progress'] as const,
+      queryFn: () => window.api.assignments.progress(c.id),
+      enabled: Boolean(c.id)
+    }))
+  })
+
+  const progressByPlan = useMemo(() => {
+    const map = new Map<string, PlanProgress>()
+    cycles.forEach((cycle, idx) => {
+      const data = progressQueries[idx]?.data
+      const slot = map.get(cycle.plan_id) ?? { totalCycles: 0, completedCycles: 0 }
+      slot.totalCycles += 1
+      if (data && data.total > 0 && data.unexecuted === 0) {
+        slot.completedCycles += 1
+      }
+      map.set(cycle.plan_id, slot)
+    })
+    return map
+  }, [cycles, progressQueries])
 
   return (
     <div className="space-y-4">
@@ -66,15 +96,19 @@ export function PlansPane({ projectId }: Props): React.JSX.Element {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {(plans ?? []).map((plan) => (
-            <PlanRow
-              key={plan.id}
-              plan={plan}
-              projectId={projectId}
-              cycleCount={cyclesByPlan.get(plan.id) ?? 0}
-              onDelete={() => setConfirmId(plan.id)}
-            />
-          ))}
+          {(plans ?? []).map((plan) => {
+            const progress = progressByPlan.get(plan.id) ?? { totalCycles: 0, completedCycles: 0 }
+            return (
+              <PlanRow
+                key={plan.id}
+                plan={plan}
+                projectId={projectId}
+                cycleCount={cyclesByPlan.get(plan.id) ?? 0}
+                progress={progress}
+                onDelete={() => setConfirmId(plan.id)}
+              />
+            )
+          })}
         </div>
       )}
 
@@ -115,13 +149,18 @@ function PlanRow({
   plan,
   projectId,
   cycleCount,
+  progress,
   onDelete
 }: {
   plan: TestPlan
   projectId: string
   cycleCount: number
+  progress: PlanProgress
   onDelete: () => void
 }): React.JSX.Element {
+  const pct =
+    progress.totalCycles === 0 ? 0 : (progress.completedCycles / progress.totalCycles) * 100
+  const isComplete = progress.totalCycles > 0 && progress.completedCycles === progress.totalCycles
   return (
     <div
       className="grid items-center gap-[18px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5"
@@ -154,16 +193,31 @@ function PlanRow({
       </div>
 
       {/* Progress + actions */}
-      <div className="min-w-[200px]">
-        {/* Mini progress bar (blank unless we have progress data — placeholder for now) */}
-        <div className="mb-2.5 flex items-center gap-2">
+      <div className="min-w-[220px]">
+        {/* Cycle-completion progress bar */}
+        <div
+          className="mb-2.5 flex items-center gap-2"
+          aria-label={`${progress.completedCycles} of ${progress.totalCycles} cycles complete`}
+        >
           <div
             className="flex h-1.5 flex-1 overflow-hidden rounded-full"
             style={{ background: 'rgba(255,255,255,0.05)' }}
+            role="progressbar"
+            aria-valuenow={Math.round(pct)}
+            aria-valuemin={0}
+            aria-valuemax={100}
           >
-            {/* TODO: wire to useQueries per cycle for actual P/F/B/U progress */}
+            <div
+              className="h-full rounded-full transition-[width] duration-[320ms]"
+              style={{
+                width: `${pct}%`,
+                background: isComplete ? 'var(--pass)' : 'var(--accent)'
+              }}
+            />
           </div>
-          <span className="font-mono text-[11px] text-[var(--fg-muted)]">0 / 0</span>
+          <span className="font-mono text-[11px] text-[var(--fg-muted)]">
+            {progress.completedCycles} / {progress.totalCycles}
+          </span>
         </div>
 
         <div className="flex items-center justify-end gap-1.5">

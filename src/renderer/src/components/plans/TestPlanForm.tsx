@@ -8,7 +8,8 @@ import {
   Clock,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Check
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -331,6 +332,8 @@ export function TestPlanForm({ projectId, mode, initial, onDone }: Props): React
     [form]
   )
 
+  const [autoSavedAt, setAutoSavedAt] = useState<number | null>(null)
+
   const submit = form.handleSubmit((values) => {
     const workingDaysVal =
       values.working_days_override.trim() !== '' ? parseFloat(values.working_days_override) : null
@@ -379,24 +382,105 @@ export function TestPlanForm({ projectId, mode, initial, onDone }: Props): React
 
   const pending = create.isPending || update.isPending
 
+  // ── Edit mode: debounced auto-save on change ────────────────────
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (mode !== 'edit' || !initial) return undefined
+    const sub = form.watch((_values, info) => {
+      if (!info.name) return
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        if (!form.formState.isDirty) return
+        void form.handleSubmit((v) => {
+          const workingDaysVal =
+            v.working_days_override.trim() !== '' ? parseFloat(v.working_days_override) : null
+          update.mutate(
+            {
+              id: initial.id,
+              patch: {
+                name: v.name,
+                description: v.description || null,
+                start_date: v.start_date || null,
+                end_date: v.end_date || null,
+                working_days: workingDaysVal,
+                tasks: v.tasks
+              }
+            },
+            {
+              onSuccess: () => {
+                setAutoSavedAt(Date.now())
+                form.reset(form.getValues(), { keepValues: true })
+              },
+              onError: (e) => toast.error(e.message)
+            }
+          )
+        })()
+      }, 700)
+    })
+    return () => {
+      sub.unsubscribe()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [mode, initial, form, update])
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-0">
       {/* ── Plan header ──────────────────────────────────────────── */}
-      <div className="mb-6">
-        {/* PID pill — edit mode */}
-        {mode === 'edit' && initial?.display_id && (
-          <div className="inline-flex items-center mb-2.5 h-5 px-2 rounded-[4px] font-mono text-[11.5px] text-[var(--fg-subtle)] bg-white/[0.03] border border-[var(--border)]">
-            {initial.display_id}
+      <div className="mb-6 flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          {/* PID pill — edit mode */}
+          {mode === 'edit' && initial?.display_id && (
+            <div className="inline-flex items-center mb-2.5 h-5 px-2 rounded-[4px] font-mono text-[11.5px] text-[var(--fg-subtle)] bg-white/[0.03] border border-[var(--border)]">
+              {initial.display_id}
+            </div>
+          )}
+          {/* Editable plan name H1 */}
+          <input
+            type="text"
+            className="w-full bg-transparent border-0 outline-none text-[26px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground px-1.5 py-0.5 -mx-1.5 rounded-md transition-colors hover:bg-white/[0.03] focus:bg-[var(--surface-1)] focus:shadow-[inset_0_0_0_1px_var(--accent-ring)]"
+            placeholder={mode === 'create' ? 'Untitled plan' : 'Plan name'}
+            aria-label="Plan name"
+            {...form.register('name')}
+          />
+        </div>
+        {mode === 'create' ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onDone}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-[var(--border)] bg-transparent text-[13px] text-[var(--fg-muted)] hover:text-foreground hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-[13px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {pending ? 'Creating…' : 'Create plan'}
+            </button>
+          </div>
+        ) : (
+          <div
+            className="flex shrink-0 items-center gap-1.5 text-[11.5px] text-[var(--fg-subtle)]"
+            aria-live="polite"
+          >
+            {pending ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="anim-saving-pulse size-1.5 rounded-full bg-[var(--accent)]" />
+                Saving…
+              </span>
+            ) : autoSavedAt ? (
+              <span className="anim-saved-fade inline-flex items-center gap-1.5" key={autoSavedAt}>
+                <Check className="size-3 text-[var(--pass)]" />
+                Saved
+              </span>
+            ) : (
+              <span className="text-[var(--fg-faint)]">Auto-saves as you edit</span>
+            )}
           </div>
         )}
-        {/* Editable plan name H1 */}
-        <input
-          type="text"
-          className="w-full bg-transparent border-0 outline-none text-[26px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground px-1.5 py-0.5 -mx-1.5 rounded-md transition-colors hover:bg-white/[0.03] focus:bg-[var(--surface-1)] focus:shadow-[inset_0_0_0_1px_var(--accent-ring)]"
-          placeholder={mode === 'create' ? 'Untitled plan' : 'Plan name'}
-          aria-label="Plan name"
-          {...form.register('name')}
-        />
       </div>
 
       {/* ── Description ──────────────────────────────────────────── */}
@@ -591,26 +675,6 @@ export function TestPlanForm({ projectId, mode, initial, onDone }: Props): React
           </button>
         </div>
       </section>
-
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <Separator className="my-7" />
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onDone}
-          disabled={pending}
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-[var(--border)] bg-transparent text-[13px] text-[var(--fg-muted)] hover:text-foreground hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={pending}
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-[13px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-        >
-          {pending ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
-        </button>
-      </div>
     </form>
   )
 }

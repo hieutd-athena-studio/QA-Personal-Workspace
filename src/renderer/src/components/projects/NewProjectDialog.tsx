@@ -1,6 +1,8 @@
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { ImagePlus, X } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import {
   Dialog,
@@ -37,20 +39,77 @@ const COLOR_PRESETS = [
   '#a855f7'
 ] as const
 
+const MAX_LOGO_SIDE = 256
+
+async function resizeImageToDataUrl(file: File): Promise<string> {
+  const reader = await new Promise<FileReader>((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve(fr)
+    fr.onerror = () => reject(new Error('Failed to read file'))
+    fr.readAsDataURL(file)
+  })
+  const dataUrl = reader.result as string
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = () => reject(new Error('Invalid image'))
+    el.src = dataUrl
+  })
+
+  const ratio = Math.min(MAX_LOGO_SIDE / img.width, MAX_LOGO_SIDE / img.height, 1)
+  const w = Math.round(img.width * ratio)
+  const h = Math.round(img.height * ratio)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas not supported')
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/png')
+}
+
 export function NewProjectDialog({ open, onOpenChange }: Props): React.JSX.Element {
   const createProject = useCreateProject()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [logoBusy, setLogoBusy] = useState(false)
   const form = useForm<NewProjectInput>({
     resolver: zodResolver(NewProjectSchema),
     defaultValues: {
       display_prefix: '',
       name: '',
       description: '',
-      color: '#8b5cf6'
+      color: '#8b5cf6',
+      logo: null
     }
   })
 
   const watchedPrefix = form.watch('display_prefix')
   const watchedColor = form.watch('color')
+  const watchedLogo = form.watch('logo')
+
+  const onPickLogo = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pick an image file (PNG, JPG, SVG…)')
+      return
+    }
+    setLogoBusy(true)
+    try {
+      const dataUrl = await resizeImageToDataUrl(file)
+      form.setValue('logo', dataUrl, { shouldDirty: true })
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setLogoBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const clearLogo = (): void => {
+    form.setValue('logo', null, { shouldDirty: true })
+  }
 
   const handleSubmit = form.handleSubmit((values) => {
     createProject.mutate(values, {
@@ -159,6 +218,74 @@ export function NewProjectDialog({ open, onOpenChange }: Props): React.JSX.Eleme
                         value={field.value ?? ''}
                       />
                     </FormControl>
+                    <FormMessage className="text-[11px]" />
+                  </FormItem>
+                )}
+              />
+
+              {/* Logo block */}
+              <FormField
+                control={form.control}
+                name="logo"
+                render={({ field }) => (
+                  <FormItem className="gap-2">
+                    <FormLabel className="text-[12px] font-medium text-[var(--fg-muted)]">
+                      Logo
+                    </FormLabel>
+                    <FormControl>
+                      <input type="hidden" value={field.value ?? ''} onChange={() => {}} />
+                    </FormControl>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="relative size-16 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-2)]"
+                        aria-label="Project logo"
+                      >
+                        {watchedLogo ? (
+                          <img
+                            src={watchedLogo}
+                            alt="Project logo preview"
+                            className="size-full object-contain"
+                          />
+                        ) : (
+                          <div
+                            className="grid size-full place-items-center text-[var(--fg-faint)]"
+                            style={{ backgroundColor: watchedColor }}
+                            aria-hidden="true"
+                          >
+                            <ImagePlus className="size-5 opacity-60" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={logoBusy}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {logoBusy ? 'Processing…' : watchedLogo ? 'Replace' : 'Upload image'}
+                          </Button>
+                          {watchedLogo && (
+                            <Button type="button" variant="outline" size="sm" onClick={clearLogo}>
+                              <X className="size-3.5" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-[var(--fg-subtle)]">
+                          PNG, JPG, SVG. Resized to 256×256.
+                        </span>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => void onPickLogo(e)}
+                      />
+                    </div>
                     <FormMessage className="text-[11px]" />
                   </FormItem>
                 )}
