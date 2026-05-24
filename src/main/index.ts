@@ -4,7 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { closeDb, getDb, getUserDataPath } from './db/client'
 import { runMigrations } from './db/migrations/runner'
+import { registerAppIpc } from './ipc/app'
 import { registerProjectsIpc } from './ipc/projects'
+import { registerProjectVersionsIpc } from './ipc/project_versions'
 import { registerCategoriesIpc } from './ipc/categories'
 import { registerTestCasesIpc } from './ipc/test_cases'
 import { registerTestPlansIpc } from './ipc/test_plans'
@@ -77,7 +79,9 @@ app.whenReady().then(() => {
   const { raw } = getDb()
   runMigrations(raw, getUserDataPath())
 
+  registerAppIpc()
   registerProjectsIpc()
+  registerProjectVersionsIpc()
   registerCategoriesIpc()
   registerTestCasesIpc()
   registerTestPlansIpc()

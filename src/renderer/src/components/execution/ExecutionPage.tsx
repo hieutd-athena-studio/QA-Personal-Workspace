@@ -480,19 +480,22 @@ export function ExecutionPage({ cycleId }: Props): React.JSX.Element {
           <button
             type="button"
             onClick={jumpToNextFailed}
-            className="flex flex-1 items-center justify-center gap-1.5 h-7 rounded-md border border-[var(--border)] bg-white/[0.03] text-[11.5px] text-[var(--fg-muted)] hover:bg-white/[0.06] hover:text-foreground transition-colors"
+            className="flex flex-1 items-center gap-1.5 h-8 px-2.5 rounded-md border border-[var(--border)] bg-white/[0.03] text-[11.5px] text-[var(--fg-muted)] hover:bg-white/[0.06] hover:text-foreground transition-colors"
           >
-            <Flag className="size-3" />
-            Next failed
-            <span className="kbd ml-auto">N</span>
+            <Flag className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1 text-left leading-none">Next failed</span>
+            <span className="kbd shrink-0">N</span>
           </button>
           <button
             type="button"
-            className="flex flex-1 items-center justify-center gap-1.5 h-7 rounded-md border border-[var(--border)] bg-white/[0.03] text-[11.5px] text-[var(--fg-muted)] hover:bg-white/[0.06] hover:text-foreground transition-colors"
+            className="flex flex-1 items-center gap-1.5 h-8 px-2.5 rounded-md border border-[var(--border)] bg-white/[0.03] text-[11.5px] text-[var(--fg-muted)] hover:bg-white/[0.06] hover:text-foreground transition-colors"
           >
-            <Search className="size-3" />
-            Jump…
-            <span className="kbd ml-auto">⌘K</span>
+            <Search className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1 text-left leading-none">Jump…</span>
+            <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
+              <span className="kbd">⌘</span>
+              <span className="kbd">K</span>
+            </span>
           </button>
         </div>
       </aside>

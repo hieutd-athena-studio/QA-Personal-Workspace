@@ -167,11 +167,20 @@ export function CommandPalette({ onNewProject, onShowShortcuts }: Props): React.
                   }
                   className="gap-2.5 px-3.5 py-1.5 text-[13px] text-foreground data-[selected=true]:bg-[var(--accent-soft)] data-[selected=true]:text-foreground"
                 >
-                  <span
-                    className="size-2 shrink-0 rounded-sm"
-                    style={{ backgroundColor: p.color }}
-                    aria-hidden="true"
-                  />
+                  {p.logo ? (
+                    <span
+                      className="block size-4 shrink-0 overflow-hidden rounded-[3px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
+                      aria-hidden="true"
+                    >
+                      <img src={p.logo} alt="" className="size-full object-cover" />
+                    </span>
+                  ) : (
+                    <span
+                      className="block size-4 shrink-0 rounded-[3px]"
+                      style={{ backgroundColor: p.color }}
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="font-mono text-[11.5px] text-[var(--fg-subtle)]">
                     {p.display_prefix}
                   </span>

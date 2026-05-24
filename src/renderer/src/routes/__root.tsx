@@ -9,6 +9,7 @@ import { ThemeToggle } from '@renderer/components/theme-toggle'
 import { UpdateBanner } from '@renderer/components/UpdateBanner'
 import { SettingsMenu } from '@renderer/components/SettingsMenu'
 import { KbdShortcutsOverlay } from '@renderer/components/KbdShortcutsOverlay'
+import { WelcomeController } from '@renderer/components/WelcomeController'
 import { useAccentEffect } from '@renderer/hooks/useAccentEffect'
 import { useThemeEffect } from '@renderer/hooks/useThemeEffect'
 import { useUIStore } from '@renderer/stores/ui'
@@ -71,11 +72,14 @@ function RootLayout(): React.JSX.Element {
             aria-label="Open command palette"
             className="flex h-7 w-[280px] min-w-0 shrink items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[rgba(255,255,255,0.03)] px-2.5 text-[var(--fg-subtle)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--border-strong)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--fg-muted)] dark:bg-[rgba(255,255,255,0.03)]"
           >
-            <Search size={13} className="shrink-0" aria-hidden="true" />
-            <span className="flex-1 truncate text-left text-[12.5px]">
+            <Search size={14} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1 truncate text-left text-[12.5px] leading-none">
               Search test cases, jump to cycle…
             </span>
-            <span className="kbd shrink-0">⌘K</span>
+            <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
+              <span className="kbd">⌘</span>
+              <span className="kbd">K</span>
+            </span>
           </button>
 
           {/* Theme toggle */}
@@ -104,6 +108,9 @@ function RootLayout(): React.JSX.Element {
 
         {/* Keyboard shortcuts overlay — ? key */}
         <KbdShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
+        {/* First-time welcome tour — owns its own visibility decisions */}
+        <WelcomeController />
       </div>
     </TooltipProvider>
   )

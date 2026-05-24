@@ -160,8 +160,39 @@ const m0003_add_project_logo: Migration = {
   }
 }
 
+const m0004_project_metadata_and_versions: Migration = {
+  version: 4,
+  name: '0004-project-metadata-and-versions',
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]
+    if (!cols.some((c) => c.name === 'metadata')) {
+      db.exec(`ALTER TABLE projects ADD COLUMN metadata TEXT;`)
+    }
+    if (!cols.some((c) => c.name === 'current_version_id')) {
+      db.exec(`ALTER TABLE projects ADD COLUMN current_version_id TEXT;`)
+    }
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_versions (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        version TEXT NOT NULL,
+        notes TEXT,
+        released_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS project_versions_project_version_idx
+        ON project_versions(project_id, version);
+      CREATE INDEX IF NOT EXISTS project_versions_project_idx
+        ON project_versions(project_id);
+    `)
+  }
+}
+
 export const ALL_MIGRATIONS: Migration[] = [
   m0001_initial,
   m0002_core_entities,
-  m0003_add_project_logo
+  m0003_add_project_logo,
+  m0004_project_metadata_and_versions
 ]

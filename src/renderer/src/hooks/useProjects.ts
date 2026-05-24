@@ -34,7 +34,10 @@ export function useUpdateProject(): ReturnType<
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, patch }) => window.api.projects.update(id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: projectsKey })
+    onSuccess: (project) => {
+      qc.invalidateQueries({ queryKey: projectsKey })
+      qc.invalidateQueries({ queryKey: ['projects', project.id] })
+    }
   })
 }
 

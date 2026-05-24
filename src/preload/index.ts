@@ -4,12 +4,22 @@ import type { AppAPI } from '../shared/types/api'
 import type { UpdaterEvent } from '../shared/types/updater'
 
 const api: AppAPI = {
+  app: {
+    info: () => ipcRenderer.invoke('app:info')
+  },
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
     get: (id) => ipcRenderer.invoke('projects:get', id),
     create: (input) => ipcRenderer.invoke('projects:create', input),
     update: (id, patch) => ipcRenderer.invoke('projects:update', id, patch),
     delete: (id) => ipcRenderer.invoke('projects:delete', id)
+  },
+  projectVersions: {
+    list: (projectId) => ipcRenderer.invoke('project_versions:list', projectId),
+    get: (id) => ipcRenderer.invoke('project_versions:get', id),
+    create: (input) => ipcRenderer.invoke('project_versions:create', input),
+    update: (id, patch) => ipcRenderer.invoke('project_versions:update', id, patch),
+    delete: (id) => ipcRenderer.invoke('project_versions:delete', id)
   },
   categories: {
     list: (projectId) => ipcRenderer.invoke('categories:list', projectId),

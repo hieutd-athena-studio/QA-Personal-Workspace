@@ -13,32 +13,40 @@ export function ProjectsPage(): React.JSX.Element {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-9 py-8 pb-12">
-        <div className="mx-auto max-w-[920px]">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-12 py-10 pb-16">
+        <div className="mx-auto max-w-[1180px]">
           {/* Header */}
-          <header className="flex items-end gap-4 mb-7">
+          <header className="flex items-end gap-4 mb-9">
             <div className="flex-1 min-w-0">
-              <h1 className="text-[28px] font-semibold tracking-[-0.02em] leading-[1.15] mb-1.5">
+              <h1 className="text-[36px] font-semibold tracking-[-0.02em] leading-[1.15] mb-2">
                 Projects
               </h1>
-              <div className="flex items-center gap-1.5 text-[13px] text-[var(--fg-muted)]">
+              <div className="flex items-center gap-2 text-[15px] text-[var(--fg-muted)]">
                 <span>Open one to browse cases, plans, and cycles.</span>
                 <span className="text-[var(--fg-faint)]" aria-hidden="true">
                   ·
                 </span>
-                <span>
-                  Press{' '}
-                  <kbd className="kbd">
-                    {typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
-                      ? '⌘K'
-                      : 'Ctrl K'}
-                  </kbd>{' '}
+                <span className="inline-flex items-center gap-1.5">
+                  Press
+                  <span className="inline-flex items-center gap-0.5">
+                    {typeof navigator !== 'undefined' && navigator.platform.includes('Mac') ? (
+                      <>
+                        <kbd className="kbd">⌘</kbd>
+                        <kbd className="kbd">K</kbd>
+                      </>
+                    ) : (
+                      <>
+                        <kbd className="kbd">Ctrl</kbd>
+                        <kbd className="kbd">K</kbd>
+                      </>
+                    )}
+                  </span>
                   to jump anywhere.
                 </span>
               </div>
             </div>
-            <Button onClick={openNewProject} className="shrink-0">
-              <Sparkles className="size-[13px]" />
+            <Button onClick={openNewProject} className="shrink-0 h-10 px-4 text-[14px]">
+              <Sparkles className="size-4" />
               New project
             </Button>
           </header>
@@ -61,7 +69,7 @@ export function ProjectsPage(): React.JSX.Element {
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-[68px] animate-pulse bg-[var(--surface-2)]"
+                  className="h-[108px] animate-pulse bg-[var(--surface-2)]"
                   aria-hidden="true"
                 />
               ))}

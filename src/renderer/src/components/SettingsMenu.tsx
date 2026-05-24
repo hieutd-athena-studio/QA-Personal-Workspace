@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { FileText, Info, Keyboard, RefreshCw, Settings as SettingsIcon } from 'lucide-react'
+import {
+  FileText,
+  Info,
+  Keyboard,
+  RefreshCw,
+  Settings as SettingsIcon,
+  Sparkles
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@renderer/components/ui/button'
 import {
@@ -12,6 +19,9 @@ import {
   DropdownMenuTrigger
 } from '@renderer/components/ui/dropdown-menu'
 import { useSettingsStore } from '@renderer/stores/settings'
+import { useUIStore } from '@renderer/stores/ui'
+import { useFTUE } from '@renderer/hooks/useFTUE'
+import { AboutDialog } from './AboutDialog'
 
 interface Props {
   onShowShortcuts: () => void
@@ -20,7 +30,15 @@ interface Props {
 export function SettingsMenu({ onShowShortcuts }: Props): React.JSX.Element {
   const enabled = useSettingsStore((s) => s.autoUpdateEnabled)
   const setEnabled = useSettingsStore((s) => s.setAutoUpdateEnabled)
+  const setShowWelcomeOpen = useUIStore((s) => s.setShowWelcomeOpen)
+  const ftue = useFTUE()
   const [checking, setChecking] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+
+  const handleShowTour = (): void => {
+    ftue.reset()
+    setShowWelcomeOpen(true)
+  }
 
   const handleCheckNow = async (): Promise<void> => {
     if (!window.api?.updater) return
@@ -78,7 +96,21 @@ export function SettingsMenu({ onShowShortcuts }: Props): React.JSX.Element {
           Keyboard shortcuts
           <span className="ml-auto font-mono text-[10.5px] text-[var(--fg-subtle)]">?</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault()
+            handleShowTour()
+          }}
+        >
+          <Sparkles className="size-4" />
+          Show welcome tour
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault()
+            setAboutOpen(true)
+          }}
+        >
           <Info className="size-4" />
           About QA Workspace
         </DropdownMenuItem>
@@ -91,6 +123,7 @@ export function SettingsMenu({ onShowShortcuts }: Props): React.JSX.Element {
           Open log file…
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
     </DropdownMenu>
   )
 }

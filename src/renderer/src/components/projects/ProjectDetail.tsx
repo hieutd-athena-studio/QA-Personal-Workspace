@@ -5,6 +5,7 @@ import {
   Download,
   FileSpreadsheet,
   MoreHorizontal,
+  Pencil,
   Trash2,
   Upload
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import {
 } from '@renderer/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { DashboardPane } from './DashboardPane'
+import { EditProjectDialog } from './EditProjectDialog'
 import { CasesPane } from '../cases/CasesPane'
 import { PlansPane } from '../plans/PlansPane'
 import { TypesPane } from '../types/TypesPane'
@@ -26,6 +28,7 @@ import { useExportBackup, useImportBackup } from '@renderer/hooks/useBackup'
 import { useTestCases } from '@renderer/hooks/useTestCases'
 import { useTestPlans } from '@renderer/hooks/useTestPlans'
 import { useTestTypes } from '@renderer/hooks/useTestTypes'
+import { useProjectVersions } from '@renderer/hooks/useProjectVersions'
 import type { Project } from '@shared/types/projects'
 
 interface Props {
@@ -114,6 +117,7 @@ function SlidingTabBar({
 
 export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element {
   const [tab, setTab] = useState<TabKey>((defaultTab as TabKey) ?? 'dashboard')
+  const [editOpen, setEditOpen] = useState(false)
   const exportBackup = useExportBackup()
   const importBackup = useImportBackup()
 
@@ -121,6 +125,11 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
   const { data: cases } = useTestCases(project.id)
   const { data: plans } = useTestPlans(project.id)
   const { data: types } = useTestTypes(project.id)
+  const { data: versions } = useProjectVersions(project.id)
+
+  // Pick the displayed "current" version: explicit current_version_id, else newest.
+  const currentVersion =
+    (versions ?? []).find((v) => v.id === project.current_version_id) ?? (versions ?? [])[0]
 
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
     { key: 'dashboard', label: 'Dashboard' },
@@ -177,9 +186,23 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
             <div className="font-mono text-[11.5px] tracking-[0.04em] text-[var(--fg-subtle)]">
               {project.display_prefix}
             </div>
-            <h1 className="mt-0.5 mb-1 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-foreground">
-              {project.name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2.5 mt-0.5 mb-1">
+              <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-foreground">
+                {project.name}
+              </h1>
+              {currentVersion && (
+                <span
+                  className="inline-flex items-center rounded-full border border-[var(--border)] bg-white/[0.04] px-2.5 py-[3px] font-mono text-[11.5px] font-semibold tracking-wide text-[var(--fg-muted)]"
+                  title={
+                    currentVersion.released_at
+                      ? `Released ${currentVersion.released_at}`
+                      : 'Current version'
+                  }
+                >
+                  v{currentVersion.version}
+                </span>
+              )}
+            </div>
             {project.description && (
               <p className="text-[13px] text-[var(--fg-muted)] max-w-[72ch] mt-0.5">
                 {project.description}
@@ -197,6 +220,11 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
                 <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[220px]">
+                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                  <Pencil className="mr-2 size-4" />
+                  Edit project…
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() =>
                     exportBackup.mutate(undefined, {
@@ -287,6 +315,8 @@ export function ProjectDetail({ project, defaultTab }: Props): React.JSX.Element
           <ReportsPane projectId={project.id} />
         </TabsContent>
       </Tabs>
+
+      <EditProjectDialog open={editOpen} onOpenChange={setEditOpen} project={project} />
     </div>
   )
 }

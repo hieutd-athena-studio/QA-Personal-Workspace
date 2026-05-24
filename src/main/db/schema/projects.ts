@@ -9,6 +9,8 @@ export const projects = sqliteTable(
     description: text('description'),
     color: text('color').notNull(),
     logo: text('logo'),
+    metadata: text('metadata'),
+    current_version_id: text('current_version_id'),
     case_counter: integer('case_counter').notNull().default(0),
     plan_counter: integer('plan_counter').notNull().default(0),
     created_at: text('created_at').notNull(),

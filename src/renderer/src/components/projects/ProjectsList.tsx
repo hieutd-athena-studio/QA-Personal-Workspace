@@ -122,37 +122,37 @@ function ProjectRow({ project, index, onDeleteRequest }: RowProps): React.JSX.El
     >
       {/* 6-column grid: swatch | prefix | name+desc | spacer | stats | actions */}
       <div
-        className="grid items-center gap-4 px-5 py-4"
-        style={{ gridTemplateColumns: '14px auto auto 1fr auto auto' }}
+        className="grid items-center gap-6 px-7 py-6"
+        style={{ gridTemplateColumns: '44px auto auto 1fr auto auto' }}
       >
-        {/* Logo or color swatch — 12×12px */}
+        {/* Logo or color swatch — 44×44px */}
         {project.logo ? (
           <span
-            className="block size-3 shrink-0 overflow-hidden rounded-[3px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
+            className="block size-11 shrink-0 overflow-hidden rounded-[8px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
             aria-hidden="true"
           >
             <img src={project.logo} alt="" className="size-full object-cover" />
           </span>
         ) : (
           <span
-            className="block size-3 shrink-0 rounded-[3px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
+            className="block size-11 shrink-0 rounded-[8px] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2)]"
             style={{ backgroundColor: project.color }}
             aria-hidden="true"
           />
         )}
 
         {/* Prefix */}
-        <span className="mono text-[11.5px] tracking-[0.05em] text-[var(--fg-subtle)] shrink-0">
+        <span className="mono text-[14px] tracking-[0.05em] text-[var(--fg-subtle)] shrink-0">
           {project.display_prefix}
         </span>
 
         {/* Name + description */}
         <div className="min-w-0">
-          <div className="text-[14.5px] font-semibold tracking-[-0.005em] leading-snug">
+          <div className="text-[19px] font-semibold tracking-[-0.005em] leading-snug">
             {project.name}
           </div>
           {project.description && (
-            <div className="text-[12.5px] text-[var(--fg-muted)] mt-0.5 truncate max-w-[60ch]">
+            <div className="text-[15px] text-[var(--fg-muted)] mt-1 truncate max-w-[68ch]">
               {project.description}
             </div>
           )}
@@ -162,15 +162,15 @@ function ProjectRow({ project, index, onDeleteRequest }: RowProps): React.JSX.El
         <div aria-hidden="true" />
 
         {/* Stats — case_counter + plan_counter */}
-        <div className="flex gap-3.5 text-[11.5px] text-[var(--fg-subtle)] whitespace-nowrap shrink-0">
+        <div className="flex gap-5 text-[15px] text-[var(--fg-subtle)] whitespace-nowrap shrink-0">
           <span>
-            <b className="mono font-semibold tabular-nums text-foreground pr-0.5">
+            <b className="mono font-semibold tabular-nums text-foreground pr-1 text-[18px]">
               {project.case_counter}
             </b>
             cases
           </span>
           <span>
-            <b className="mono font-semibold tabular-nums text-foreground pr-0.5">
+            <b className="mono font-semibold tabular-nums text-foreground pr-1 text-[18px]">
               {project.plan_counter}
             </b>
             plans
@@ -181,7 +181,7 @@ function ProjectRow({ project, index, onDeleteRequest }: RowProps): React.JSX.El
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-fast)]">
           <button
             type="button"
-            className="flex size-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--fg-subtle)] hover:text-destructive hover:bg-destructive/10 transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="flex size-10 items-center justify-center rounded-[var(--radius-sm)] text-[var(--fg-subtle)] hover:text-destructive hover:bg-destructive/10 transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label={`Delete ${project.name}`}
             onClick={(e) => {
               e.preventDefault()
@@ -189,14 +189,14 @@ function ProjectRow({ project, index, onDeleteRequest }: RowProps): React.JSX.El
               onDeleteRequest(project)
             }}
           >
-            <Trash2 className="size-[14px]" />
+            <Trash2 className="size-[18px]" />
           </button>
 
           <span
             className="text-[var(--fg-faint)] group-hover:text-[var(--fg-muted)] group-hover:translate-x-0.5 transition-[color,transform] duration-[var(--duration-fast)]"
             aria-hidden="true"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-[22px]" />
           </span>
         </div>
       </div>

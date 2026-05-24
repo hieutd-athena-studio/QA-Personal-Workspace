@@ -2,6 +2,8 @@ import { useTestCases } from '@renderer/hooks/useTestCases'
 import { useTestPlans } from '@renderer/hooks/useTestPlans'
 import { useTestCyclesForProject } from '@renderer/hooks/useTestCycles'
 import { useTestTypes } from '@renderer/hooks/useTestTypes'
+import { MetadataCard } from './MetadataCard'
+import { ChangelogCard } from './ChangelogCard'
 import type { Project } from '@shared/types/projects'
 
 interface Props {
@@ -138,6 +140,12 @@ export function DashboardPane({ project }: Props): React.JSX.Element {
             />
           </div>
         </div>
+      </div>
+
+      {/* Metadata + Changelog row */}
+      <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <MetadataCard project={project} />
+        <ChangelogCard project={project} />
       </div>
     </div>
   )

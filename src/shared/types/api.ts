@@ -1,4 +1,10 @@
+import type { AppInfo } from './app'
 import type { NewProjectInput, Project, ProjectPatch } from './projects'
+import type {
+  NewProjectVersionInput,
+  ProjectVersion,
+  ProjectVersionPatch
+} from './project_versions'
 import type { Category, CategoryPatch, NewCategoryInput } from './categories'
 import type { NewTestCaseInput, TestCase, TestCasePatch, TestCaseWithSteps } from './test_cases'
 import type { NewTestPlanInput, TestPlan, TestPlanPatch, TestPlanWithTasks } from './test_plans'
@@ -12,6 +18,14 @@ export interface ProjectsAPI {
   get: (id: string) => Promise<Project | null>
   create: (input: NewProjectInput) => Promise<Project>
   update: (id: string, patch: ProjectPatch) => Promise<Project>
+  delete: (id: string) => Promise<void>
+}
+
+export interface ProjectVersionsAPI {
+  list: (projectId: string) => Promise<ProjectVersion[]>
+  get: (id: string) => Promise<ProjectVersion | null>
+  create: (input: NewProjectVersionInput) => Promise<ProjectVersion>
+  update: (id: string, patch: ProjectVersionPatch) => Promise<ProjectVersion>
   delete: (id: string) => Promise<void>
 }
 
@@ -99,8 +113,14 @@ export interface UpdaterAPI {
   onEvent: (cb: (event: UpdaterEvent) => void) => () => void
 }
 
+export interface AppInfoAPI {
+  info: () => Promise<AppInfo>
+}
+
 export interface AppAPI {
+  app: AppInfoAPI
   projects: ProjectsAPI
+  projectVersions: ProjectVersionsAPI
   categories: CategoriesAPI
   cases: TestCasesAPI
   plans: TestPlansAPI

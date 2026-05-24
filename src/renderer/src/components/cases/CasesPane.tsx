@@ -406,16 +406,26 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
             <EmptyState
               icon={<Sparkles className="size-5 text-[var(--fg-faint)]" />}
               headline="No test cases yet"
-              sub="Create your first test case to get started."
+              sub="Add a category first to group related cases, then create your first case. Steps and expected results live inside each case."
               cta={
-                <Link
-                  to="/projects/$projectId/cases/new"
-                  params={{ projectId }}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
-                >
-                  <Plus className="size-3.5" />
-                  New case
-                </Link>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCatDialogOpen(true)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-transparent px-3 text-[13px] font-medium text-[var(--fg-muted)] transition-colors hover:bg-white/[0.04] hover:text-foreground"
+                  >
+                    <FolderPlus className="size-3.5" />
+                    Add category
+                  </button>
+                  <Link
+                    to="/projects/$projectId/cases/new"
+                    params={{ projectId }}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+                  >
+                    <Plus className="size-3.5" />
+                    New case
+                  </Link>
+                </div>
               }
             />
           )}
@@ -575,7 +585,7 @@ export function CasesPane({ projectId }: Props): React.JSX.Element {
 
       {/* Selection action bar */}
       {selectedIds.size > 0 && (
-        <div className="anim-selbar-in pointer-events-none absolute bottom-6 right-6 z-50">
+        <div className="anim-selbar-in pointer-events-none fixed bottom-6 right-6 z-50">
           <div
             className="pointer-events-auto flex items-center gap-1.5 rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-2)] pl-3.5 pr-1.5 py-1.5"
             style={{
