@@ -1,6 +1,6 @@
 {
   "name": "qa-workspace-v2",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local-only offline-first QA test case management desktop tool",
   "main": "./out/main/index.js",
   "author": "hieutd@athena.studio",
