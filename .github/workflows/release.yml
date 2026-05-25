@@ -36,24 +36,19 @@ jobs:
 
       - name: Build & publish
         shell: bash
-        # If signing secrets aren't configured the env vars arrive as empty strings,
-        # and electron-builder tries to read `""` as a cert file (`not a file` error).
-        # Unset them and force ad-hoc signing of every nested binary (mac.identity='-')
-        # so the outer app + Electron Framework share the same (empty) Team ID.
-        # Without `--config.mac.identity=-` the outer wrapper is ad-hoc signed but the
-        # bundled Electron Framework keeps Apple's signature → macOS dyld refuses to
-        # load with "different Team IDs".
+        # When no signing secrets are configured, GitHub injects empty strings for them.
+        # Empty CSC_LINK confuses electron-builder ("not a file" error) so unset them
+        # and let electron-builder skip its native signing pipeline. The `afterPack`
+        # hook in electron-builder.yml then re-signs the entire bundle ad-hoc with
+        # `codesign --deep --force --sign -` so the Electron Framework and the outer
+        # wrapper share the same (empty) Team ID — required by macOS 14+ dyld.
         run: |
           if [ -z "$CSC_LINK" ]; then
-            echo "No macOS code-signing certs configured — building ad-hoc signed, skipping notarization"
+            echo "No macOS code-signing certs configured — afterPack hook will ad-hoc sign"
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             export CSC_IDENTITY_AUTO_DISCOVERY=false
-            pnpm exec electron-builder --publish always \
-              --config.mac.identity=- \
-              --config.mac.notarize=false
-          else
-            pnpm exec electron-builder --publish always
           fi
+          pnpm exec electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # macOS signing — add these secrets in GitHub repo settings before first signed release
