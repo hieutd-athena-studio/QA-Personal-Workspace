@@ -45,10 +45,12 @@ jobs:
         # load with "different Team IDs".
         run: |
           if [ -z "$CSC_LINK" ]; then
-            echo "No macOS code-signing certs configured — building ad-hoc signed"
+            echo "No macOS code-signing certs configured — building ad-hoc signed, skipping notarization"
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             export CSC_IDENTITY_AUTO_DISCOVERY=false
-            pnpm exec electron-builder --publish always --config.mac.identity=-
+            pnpm exec electron-builder --publish always \
+              --config.mac.identity=- \
+              --config.mac.notarize=false
           else
             pnpm exec electron-builder --publish always
           fi
