@@ -32,6 +32,12 @@ jobs:
 
       - run: pnpm test
 
+      # pnpm test rebuilds better-sqlite3 for the Node ABI. Switch it back to the
+      # Electron ABI before electron-builder packages the .app, otherwise the
+      # production app crashes at startup on `require('better-sqlite3')` and the
+      # main window never shows.
+      - run: pnpm rebuild:electron
+
       - run: pnpm build
 
       - name: Build & publish
