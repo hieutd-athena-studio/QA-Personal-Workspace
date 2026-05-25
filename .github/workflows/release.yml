@@ -31,7 +31,18 @@ jobs:
 
       - run: pnpm build
 
-      - run: pnpm exec electron-builder --publish always
+      - name: Build & publish
+        shell: bash
+        # If signing secrets aren't configured the env vars arrive as empty strings,
+        # and electron-builder tries to read `""` as a cert file (`not a file` error).
+        # Unset them so the build falls back to unsigned output cleanly.
+        run: |
+          if [ -z "$CSC_LINK" ]; then
+            echo "No macOS code-signing certs configured — building unsigned"
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          pnpm exec electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # macOS signing — add these secrets in GitHub repo settings before first signed release
