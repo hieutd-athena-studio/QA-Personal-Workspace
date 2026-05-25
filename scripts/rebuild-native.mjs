@@ -22,7 +22,7 @@ import { rebuild } from '../node_modules/.pnpm/@electron+rebuild@4.0.4/node_modu
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
-import { execFileSync, spawnSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { existsSync, unlinkSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
