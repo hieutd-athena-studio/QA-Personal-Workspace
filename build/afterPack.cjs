@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // electron-builder afterPack hook.
 //
 // When we don't have an Apple Developer ID cert (no CSC_LINK env var), electron-builder
